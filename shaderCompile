@@ -1,0 +1,2 @@
+glslangValidator -V VertexShader.vert
+glslangValidator -V FragmentShader.frag
