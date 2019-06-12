@@ -37,6 +37,12 @@ private:
     const glm::vec3 recalculateDirection();
     void processKeyboardInput(const glm::vec3 direction, const float elapsedTime);
     void loadSceneData();
+    void getMeshVertexData(aiMesh* mesh, std::vector<glm::vec3>& data) const;
+    void getMeshNormalData(aiMesh* mesh, std::vector<glm::vec3>& data) const;
+    void getMeshUVData(aiMesh* mesh, std::vector<glm::vec2>& data) const;
+    void getMeshIndexData(aiMesh* mesh, std::vector<uint32_t>& data) const;
+    void getSceneMaterials(aiScene* scene, std::vector<aiMaterial>& materials) const;
+    const aiMaterial& getMaterial(aiMesh* mesh, const std::vector<aiMaterial>& materials) const;
     
     const uint32_t WIDTH = 1024;
     const uint32_t HEIGHT = 720;

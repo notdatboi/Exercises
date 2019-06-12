@@ -116,24 +116,81 @@ void App::loadSceneData()
     if(!scene) throw std::runtime_error("Failed to create scene!\n");
 
     aiMesh* mesh = (*scene->mMeshes);
-    vertexCount = (*scene->mMeshes)->mNumVertices;
-    unsigned int faceCount = (*scene->mMeshes)->mNumFaces;
+    getMeshIndexData(mesh, indices);
+    getMeshVertexData(mesh, positions);
+    getMeshUVData(mesh, uvs);
+    getMeshNormalData(mesh, normals);
+    vertexCount = positions.size();
+}
 
-    for(int i = 0; i < faceCount; ++i)
-    {
-        aiFace x = *((*scene->mMeshes)->mFaces + i);
-        for(int j = 0; j < x.mNumIndices; ++j)
-        {
-            indices.push_back(*(x.mIndices + j));
-        }
-    }
-
+void App::getMeshVertexData(aiMesh* mesh, std::vector<glm::vec3>& data) const 
+{
+    const unsigned int vertexCount = mesh->mNumVertices;
+    data.resize(vertexCount);
+    aiVector3D* vertex = mesh->mVertices;
     for(int i = 0; i < vertexCount; ++i)
     {
-        uvs.push_back({(mesh->mTextureCoords[0] + i)->x, (mesh->mTextureCoords[0] + i)->y});
-        positions.push_back({(mesh->mVertices + i)->x, (mesh->mVertices + i)->y, (mesh->mVertices + i)->z});
-        normals.push_back({(mesh->mNormals + i)->x, (mesh->mNormals + i)->y, (mesh->mNormals + i)->z});
+        data[i] = {vertex->x, vertex->y, vertex->z};
+        ++vertex;
     }
+}
+
+void App::getMeshNormalData(aiMesh* mesh, std::vector<glm::vec3>& data) const
+{
+    const unsigned int vertexCount = mesh->mNumVertices;
+    data.resize(vertexCount);
+    aiVector3D* normal = mesh->mNormals;
+    for(int i = 0; i < vertexCount; ++i)
+    {
+        data[i] = {normal->x, normal->y, normal->z};
+        ++normal;
+    }
+}
+
+void App::getMeshUVData(aiMesh* mesh, std::vector<glm::vec2>& data) const
+{
+    const unsigned int vertexCount = mesh->mNumVertices;
+    data.resize(vertexCount);
+    aiVector3D* uv = mesh->mTextureCoords[0];
+    for(int i = 0; i < vertexCount; ++i)
+    {
+        data[i] = {uv->x, uv->y};
+        ++uv;
+    }
+}
+
+void App::getMeshIndexData(aiMesh* mesh, std::vector<uint32_t>& data) const
+{
+    const unsigned int faceCount = mesh->mNumFaces;
+    data = std::vector<uint32_t>();
+    aiFace* face = mesh->mFaces;
+    for(int i = 0; i < faceCount; ++i)
+    {
+        unsigned int* index = face->mIndices;
+        for(int j = 0; j < face->mNumIndices; ++j)
+        {
+            data.push_back(static_cast<uint32_t>(*index));
+            ++index;
+        }
+        ++face;
+    }
+}
+
+void App::getSceneMaterials(aiScene* scene, std::vector<aiMaterial>& materials) const
+{
+    const unsigned int materialCount = scene->mNumMaterials;
+    materials.resize(materialCount);
+    aiMaterial** material = scene->mMaterials;
+    for(int i = 0; i < materialCount; ++i)
+    {
+        materials[i] = (*(*material));
+        ++material;
+    }
+}
+
+const aiMaterial& App::getMaterial(aiMesh* mesh, const std::vector<aiMaterial>& materials) const
+{
+    return materials[mesh->mMaterialIndex];
 }
 
 void App::createVertexBuffer()
