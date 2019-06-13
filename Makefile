@@ -7,6 +7,9 @@ SPARKOBJS=$(wildcard ../Spark/obj/*.o)
 
 all: $(BIN)
 
+clean:
+	rm obj/* && make all
+
 $(BIN): $(OBJS)
 	$(CC) $(OBJS) $(SPARKOBJS) $(LIBS)
 
