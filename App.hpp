@@ -58,7 +58,8 @@ private:
     std::vector<uint32_t> indices;
     std::vector<glm::vec4> instances;
 
-    spk::VertexBuffer vertexBuffer;
+    spk::VertexAlignmentInfo alignmentInfo;
+    std::vector<spk::VertexBuffer> vertexBuffers;
     spk::Window window;
     spk::ResourceSet resourceSet;
     spk::Texture textureWALL;

@@ -9,6 +9,8 @@ void App::run()
     const double frameTime = 1 / fps;
     auto startClock = std::chrono::system_clock::now();
     double timeCounter = 0;
+
+    std::vector<spk::VertexBuffer*> pVertexBuffers = {&vertexBuffers[0]};
     
     while(!glfwWindowShouldClose(window.getGLFWWindow()))
     {
@@ -25,7 +27,7 @@ void App::run()
             timeCounter -= frameTime;
             resourceSet.update(0, 0, &mvp);
             resourceSet.update(3, 0, &pos);
-            window.draw(&resourceSet, &vertexBuffer, &shaderSet);
+            window.draw(&resourceSet, &alignmentInfo, pVertexBuffers, &shaderSet);
         }
     }
 }
@@ -81,7 +83,7 @@ void App::processKeyboardInput(const glm::vec3 direction, const float elapsedTim
     mvp.view = glm::lookAt(pos, pos + direction, up);
 }
 
-App::App(): pos(3, 0, 0), instances({{0, 0, 0, 0}, {2, 2, 2, 0}})
+App::App(): pos(3, 0, 0), instances({{0, 0, 0, 0}, {2, 2, 2, 0}}), vertexBuffers(1)
 {
     loadSceneData();
 
@@ -103,10 +105,10 @@ App::App(): pos(3, 0, 0), instances({{0, 0, 0, 0}, {2, 2, 2, 0}})
     
     createVertexBuffer();
     createResourceSet();
-    vertexBuffer.updateVertexBuffer(positions.data(), 0);
-    vertexBuffer.updateVertexBuffer(uvs.data(), 1);
-    vertexBuffer.updateVertexBuffer(normals.data(), 2);
-    vertexBuffer.updateIndexBuffer(indices.data());
+    vertexBuffers[0].updateVertexBuffer(positions.data(), 0);
+    vertexBuffers[0].updateVertexBuffer(uvs.data(), 1);
+    vertexBuffers[0].updateVertexBuffer(normals.data(), 2);
+    vertexBuffers[0].updateIndexBuffer(indices.data());
 }
 
 void App::loadSceneData()
@@ -195,32 +197,38 @@ const aiMaterial& App::getMaterial(aiMesh* mesh, const std::vector<aiMaterial>& 
 
 void App::createVertexBuffer()
 {
-    spk::VertexAlignmentInfo positionInfo;
+    spk::BindingAlignmentInfo positionInfo;
     positionInfo.binding = 0;
     positionInfo.structSize = sizeof(glm::vec3);
     positionInfo.fields = std::vector<spk::StructFieldInfo>(1);
     positionInfo.fields[0] = {0, spk::FieldFormat::vec3f, 0};
 
-    spk::VertexAlignmentInfo uvInfo;
+    spk::BindingAlignmentInfo uvInfo;
     uvInfo.binding = 1;
     uvInfo.structSize = sizeof(glm::vec2);
     uvInfo.fields = std::vector<spk::StructFieldInfo>(1);
     uvInfo.fields[0] = {1, spk::FieldFormat::vec2f, 0};
 
-    spk::VertexAlignmentInfo normalInfo;
+    spk::BindingAlignmentInfo normalInfo;
     normalInfo.binding = 2;
     normalInfo.structSize = sizeof(glm::vec3);
     normalInfo.fields = std::vector<spk::StructFieldInfo>(1);
     normalInfo.fields[0] = {2, spk::FieldFormat::vec3f, 0};
 
-    std::vector<spk::VertexAlignmentInfo> ais = {positionInfo, uvInfo, normalInfo};
+    std::vector<spk::BindingAlignmentInfo> ais = {positionInfo, uvInfo, normalInfo};
+
+    alignmentInfo.create(ais);
+
     std::vector<uint32_t> sizes = {
         vertexCount * static_cast<uint32_t>(sizeof(glm::vec3)), 
         vertexCount * static_cast<uint32_t>(sizeof(glm::vec2)), 
         vertexCount * static_cast<uint32_t>(sizeof(glm::vec3))
     };
-    vertexBuffer.create(ais, sizes, indices.size() * sizeof(uint32_t));
-    vertexBuffer.setInstancingOptions(2, 0);
+
+    std::vector<uint32_t> bindings = {0, 1, 2};
+
+    vertexBuffers[0].create(bindings, sizes, indices.size() * sizeof(uint32_t));
+    vertexBuffers[0].setInstancingOptions(2, 0);
 }
 
 void App::createResourceSet()
