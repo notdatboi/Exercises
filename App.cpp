@@ -83,9 +83,10 @@ void App::processKeyboardInput(const glm::vec3 direction, const float elapsedTim
     mvp.view = glm::lookAt(pos, pos + direction, up);
 }
 
-App::App(): pos(3, 0, 0), instances({{0, 0, 0, 0}, {2, 2, 2, 0}}), vertexBuffers(1)
+App::App(): pos(-2, 2, 0), vertexBuffers(1)
 {
     loadSceneData();
+    cube.instances = {{0, 0, 0, 0}, {2, 2, 2, 0}};
 
     spk::DrawOptions opts;
     opts.cullMode = spk::CullMode::Clockwise;
@@ -105,24 +106,30 @@ App::App(): pos(3, 0, 0), instances({{0, 0, 0, 0}, {2, 2, 2, 0}}), vertexBuffers
     
     createVertexBuffer();
     createResourceSet();
-    vertexBuffers[0].updateVertexBuffer(positions.data(), 0);
-    vertexBuffers[0].updateVertexBuffer(uvs.data(), 1);
-    vertexBuffers[0].updateVertexBuffer(normals.data(), 2);
-    vertexBuffers[0].updateIndexBuffer(indices.data());
+    vertexBuffers[0].updateVertexBuffer(cube.positions.data(), 0);
+    vertexBuffers[0].updateVertexBuffer(cube.uvs.data(), 1);
+    vertexBuffers[0].updateVertexBuffer(cube.normals.data(), 2);
+    vertexBuffers[0].updateIndexBuffer(cube.indices.data());
 }
 
 void App::loadSceneData()
 {
-    const std::string filename = "Model.obj";
+    const std::string filename = "DonutWithStoneTexture.obj";
     const aiScene* scene = importer.ReadFile(filename, aiProcess_JoinIdenticalVertices);
     if(!scene) throw std::runtime_error("Failed to create scene!\n");
 
-    aiMesh* mesh = (*scene->mMeshes);
-    getMeshIndexData(mesh, indices);
-    getMeshVertexData(mesh, positions);
-    getMeshUVData(mesh, uvs);
-    getMeshNormalData(mesh, normals);
-    vertexCount = positions.size();
+    getSceneMaterials(scene, sceneMaterials);
+    initMeshFromScene(scene, 1, cube);
+    vertexCount = cube.positions.size();
+}
+
+void App::initMeshFromScene(const aiScene* scene, const uint32_t meshIndex, Mesh& mesh) const
+{
+    aiMesh* currentMesh = *(scene->mMeshes + meshIndex);
+    getMeshIndexData(currentMesh, mesh.indices);
+    getMeshVertexData(currentMesh, mesh.positions);
+    getMeshUVData(currentMesh, mesh.uvs);
+    getMeshNormalData(currentMesh, mesh.normals);
 }
 
 void App::getMeshVertexData(aiMesh* mesh, std::vector<glm::vec3>& data) const 
@@ -178,19 +185,19 @@ void App::getMeshIndexData(aiMesh* mesh, std::vector<uint32_t>& data) const
     }
 }
 
-void App::getSceneMaterials(aiScene* scene, std::vector<aiMaterial>& materials) const
+void App::getSceneMaterials(const aiScene* scene, std::vector<aiMaterial*>& materials) const
 {
     const unsigned int materialCount = scene->mNumMaterials;
     materials.resize(materialCount);
     aiMaterial** material = scene->mMaterials;
     for(int i = 0; i < materialCount; ++i)
     {
-        materials[i] = (*(*material));
+        materials[i] = (*material);
         ++material;
     }
 }
 
-const aiMaterial& App::getMaterial(aiMesh* mesh, const std::vector<aiMaterial>& materials) const
+const aiMaterial* App::getMeshMaterial(aiMesh* mesh, const std::vector<aiMaterial*>& materials) const
 {
     return materials[mesh->mMaterialIndex];
 }
@@ -227,8 +234,8 @@ void App::createVertexBuffer()
 
     std::vector<uint32_t> bindings = {0, 1, 2};
 
-    vertexBuffers[0].create(bindings, sizes, indices.size() * sizeof(uint32_t));
-    vertexBuffers[0].setInstancingOptions(2, 0);
+    vertexBuffers[0].create(bindings, sizes, cube.indices.size() * sizeof(uint32_t));
+    vertexBuffers[0].setInstancingOptions(cube.instances.size(), 0);
 }
 
 void App::createResourceSet()
@@ -239,7 +246,7 @@ void App::createResourceSet()
     textureWALL.create(width, height, spk::ImageFormat::RGBA8, 2, 0);
 
     uniformBuffer.create(sizeof(MVP), 0, 0);
-    instancingBuffer.create(sizeof(glm::vec4) * instances.size(), 1, 0);
+    instancingBuffer.create(sizeof(glm::vec4) * cube.instances.size(), 1, 0);
 
     spk::UniformBuffer cameraPos;
     cameraPos.create(sizeof(glm::vec3), 3, 0);
@@ -254,7 +261,7 @@ void App::createResourceSet()
 
     resourceSet.create(textures, ubs);
     resourceSet.update(0, 0, &mvp);
-    resourceSet.update(1, 0, instances.data());
+    resourceSet.update(1, 0, cube.instances.data());
     resourceSet.update(2, 0, reinterpret_cast<const void *>(textureData));
     resourceSet.update(3, 0, &pos);
 

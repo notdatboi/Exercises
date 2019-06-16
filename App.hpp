@@ -25,6 +25,15 @@ struct MVP
     glm::mat4 proj;
 };
 
+struct Mesh
+{
+    std::vector<glm::vec2> uvs;
+    std::vector<glm::vec3> positions;
+    std::vector<glm::vec3> normals;
+    std::vector<uint32_t> indices;
+    std::vector<glm::vec4> instances;
+};
+
 class App
 {
 public:
@@ -37,12 +46,13 @@ private:
     const glm::vec3 recalculateDirection();
     void processKeyboardInput(const glm::vec3 direction, const float elapsedTime);
     void loadSceneData();
+    void initMeshFromScene(const aiScene* scene, const uint32_t meshIndex, Mesh& mesh) const;
     void getMeshVertexData(aiMesh* mesh, std::vector<glm::vec3>& data) const;
     void getMeshNormalData(aiMesh* mesh, std::vector<glm::vec3>& data) const;
     void getMeshUVData(aiMesh* mesh, std::vector<glm::vec2>& data) const;
     void getMeshIndexData(aiMesh* mesh, std::vector<uint32_t>& data) const;
-    void getSceneMaterials(aiScene* scene, std::vector<aiMaterial>& materials) const;
-    const aiMaterial& getMaterial(aiMesh* mesh, const std::vector<aiMaterial>& materials) const;
+    void getSceneMaterials(const aiScene* scene, std::vector<aiMaterial*>& materials) const;
+    const aiMaterial* getMeshMaterial(aiMesh* mesh, const std::vector<aiMaterial*>& materials) const;
     
     const uint32_t WIDTH = 1024;
     const uint32_t HEIGHT = 720;
@@ -52,11 +62,7 @@ private:
     Assimp::Importer importer;
     unsigned char* textureData;
 
-    std::vector<glm::vec2> uvs;
-    std::vector<glm::vec3> positions;
-    std::vector<glm::vec3> normals;
-    std::vector<uint32_t> indices;
-    std::vector<glm::vec4> instances;
+    Mesh cube;
 
     spk::VertexAlignmentInfo alignmentInfo;
     std::vector<spk::VertexBuffer> vertexBuffers;
@@ -67,6 +73,8 @@ private:
     spk::UniformBuffer instancingBuffer;
     spk::ShaderSet shaderSet;
     glm::vec3 pos;
+
+    std::vector<aiMaterial*> sceneMaterials;
 };
 
 #endif
