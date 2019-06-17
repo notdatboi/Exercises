@@ -20,19 +20,20 @@ void App::run()
         timeCounter += elapsed.count();
         startClock = endClock;
 
-        processKeyboardInput(recalculateDirection(), static_cast<float>(elapsed.count()));
+        recalculateDirection();
+        processKeyboardInput(static_cast<float>(elapsed.count()));
 
         if(timeCounter >= frameTime)
         {
             timeCounter -= frameTime;
             resourceSet.update(0, 0, &mvp);
-            resourceSet.update(3, 0, &pos);
+            resourceSet.update(3, 0, &camera);
             window.draw(&resourceSet, &alignmentInfo, pVertexBuffers, &shaderSet);
         }
     }
 }
 
-const glm::vec3 App::recalculateDirection()
+void App::recalculateDirection()
 {
     static double lastX = WIDTH / 2;
     static double lastY = HEIGHT / 2;
@@ -50,14 +51,12 @@ const glm::vec3 App::recalculateDirection()
     pitch += offsetY;
     if(pitch < -89.0) pitch = -89.0;
     if(pitch > 89.0) pitch = 89.0;
-    glm::vec3 direction;
-    direction.x = glm::cos(glm::radians(pitch)) * glm::cos(glm::radians(yaw));
-    direction.y = -glm::cos(glm::radians(pitch)) * glm::sin(glm::radians(yaw));
-    direction.z = -glm::sin(glm::radians(pitch));
-    return glm::normalize(direction);
+    camera.dir.x = glm::cos(glm::radians(pitch)) * glm::cos(glm::radians(yaw));
+    camera.dir.y = -glm::cos(glm::radians(pitch)) * glm::sin(glm::radians(yaw));
+    camera.dir.z = -glm::sin(glm::radians(pitch));
 }
 
-void App::processKeyboardInput(const glm::vec3 direction, const float elapsedTime)
+void App::processKeyboardInput(const float elapsedTime)
 {
     static const glm::vec3 up(0, 0, 1);
     int WState = glfwGetKey(window.getGLFWWindow(), GLFW_KEY_W);
@@ -66,25 +65,26 @@ void App::processKeyboardInput(const glm::vec3 direction, const float elapsedTim
     int DState = glfwGetKey(window.getGLFWWindow(), GLFW_KEY_D);
     if(WState == GLFW_PRESS)
     {
-        pos += direction * elapsedTime;
+        camera.pos += camera.dir * elapsedTime;
     }
     if(SState == GLFW_PRESS)
     {
-        pos -= direction * elapsedTime;
+        camera.pos -= camera.dir * elapsedTime;
     }
     if(AState == GLFW_PRESS)
     {
-        pos += glm::normalize(glm::cross(up, direction)) * elapsedTime;
+        camera.pos += glm::normalize(glm::cross(up, camera.dir)) * elapsedTime;
     }
     if(DState == GLFW_PRESS)
     {
-        pos -= glm::normalize(glm::cross(up, direction)) * elapsedTime;
+        camera.pos -= glm::normalize(glm::cross(up, camera.dir)) * elapsedTime;
     }
-    mvp.view = glm::lookAt(pos, pos + direction, up);
+    mvp.view = glm::lookAt(camera.pos, camera.pos + camera.dir, up);
 }
 
-App::App(): pos(-2, 2, 0), vertexBuffers(1)
+App::App(): vertexBuffers(1)
 {
+    camera.pos = glm::vec3(-2, 2, 0);
     loadSceneData();
     cube.instances = {{0, 0, 0, 0}, {2, 2, 2, 0}};
 
@@ -93,7 +93,7 @@ App::App(): pos(-2, 2, 0), vertexBuffers(1)
     window.create(WIDTH, HEIGHT, "App", opts);
 
     mvp.model = glm::mat4(1);
-    mvp.view = glm::lookAt(pos, glm::vec3(0, 0, 0), glm::vec3(0, 0, 1));
+    mvp.view = glm::lookAt(camera.pos, glm::vec3(0, 0, 0), glm::vec3(0, 0, 1));
     mvp.proj = glm::perspective(glm::radians<float>(60), WIDTH / (float)HEIGHT, 0.1f, 10.f);
     mvp.proj[1][1] = -mvp.proj[1][1];
 
@@ -248,8 +248,8 @@ void App::createResourceSet()
     uniformBuffer.create(sizeof(MVP), 0, 0);
     instancingBuffer.create(sizeof(glm::vec4) * cube.instances.size(), 1, 0);
 
-    spk::UniformBuffer cameraPos;
-    cameraPos.create(sizeof(glm::vec3), 3, 0);
+    spk::UniformBuffer cameraInfo;
+    cameraInfo.create(sizeof(camera), 3, 0);
 
     std::vector<spk::Texture> textures;
     textures.push_back(textureWALL);
@@ -257,13 +257,13 @@ void App::createResourceSet()
     std::vector<spk::UniformBuffer> ubs;
     ubs.push_back(uniformBuffer);
     ubs.push_back(instancingBuffer);
-    ubs.push_back(cameraPos);
+    ubs.push_back(cameraInfo);
 
     resourceSet.create(textures, ubs);
     resourceSet.update(0, 0, &mvp);
     resourceSet.update(1, 0, cube.instances.data());
     resourceSet.update(2, 0, reinterpret_cast<const void *>(textureData));
-    resourceSet.update(3, 0, &pos);
+    resourceSet.update(3, 0, &camera);
 
 }
 

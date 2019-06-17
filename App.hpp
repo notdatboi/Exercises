@@ -3,6 +3,7 @@
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
+//#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 #include"../Spark/Window.hpp"
 #include<fstream>
 #include<glm/glm.hpp>
@@ -25,6 +26,12 @@ struct MVP
     glm::mat4 proj;
 };
 
+struct Camera
+{
+    alignas(16) glm::vec3 pos;
+    alignas(16) glm::vec3 dir;
+};
+
 struct Mesh
 {
     std::vector<glm::vec2> uvs;
@@ -43,8 +50,8 @@ public:
 private:
     void createResourceSet();
     void createVertexBuffer();
-    const glm::vec3 recalculateDirection();
-    void processKeyboardInput(const glm::vec3 direction, const float elapsedTime);
+    void recalculateDirection();
+    void processKeyboardInput(const float elapsedTime);
     void loadSceneData();
     void initMeshFromScene(const aiScene* scene, const uint32_t meshIndex, Mesh& mesh) const;
     void getMeshVertexData(aiMesh* mesh, std::vector<glm::vec3>& data) const;
@@ -72,7 +79,7 @@ private:
     spk::UniformBuffer uniformBuffer;
     spk::UniformBuffer instancingBuffer;
     spk::ShaderSet shaderSet;
-    glm::vec3 pos;
+    Camera camera;
 
     std::vector<aiMaterial*> sceneMaterials;
 };
