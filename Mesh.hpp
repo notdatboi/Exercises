@@ -12,9 +12,9 @@
 
 struct Vertex
 {
-    glm::vec3 position;
-    glm::vec3 normal;
-    glm::vec2 uv;
+    alignas(16) glm::vec3 position;
+    alignas(16) glm::vec3 normal;
+    alignas(8) glm::vec2 uv;
 };
 
 class Mesh
