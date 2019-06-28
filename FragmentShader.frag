@@ -4,12 +4,12 @@ layout(location = 0) in vec3 fragCoords;
 layout(location = 1) in vec2 uv;
 layout(location = 2) in vec3 normal;
 
-layout(set = 2, binding = 0) uniform sampler2D txt;
-layout(set = 3, binding = 0) uniform Camera
+layout(set = 1, binding = 0) uniform Camera
 {
     vec3 pos;
     vec3 viewDir;
 } camera;
+layout(set = 3, binding = 0) uniform sampler2D txt;
 
 layout(location = 0) out vec4 outColor;
 

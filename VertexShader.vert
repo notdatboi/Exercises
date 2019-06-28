@@ -8,7 +8,7 @@ layout(set = 0, binding = 0) uniform MVP
     mat4 proj;
 } mvp;
 
-layout(set = 1, binding = 0) uniform Instances
+layout(set = 2, binding = 0) uniform Instances
 {
     vec3 data[2];
 } instances;
