@@ -73,6 +73,11 @@ TextureHolder& TextureHolder::addTexture(const vk::Format format,
     return *this;
 }
 
+const vk::ImageLayout TextureHolder::getImageLayout(const std::string id) const
+{
+    return textures.at(id).image.getLayout();
+}
+
 const vk::Image& TextureHolder::getImage(const std::string id) const
 {
     return textures.at(id).image.getImage();

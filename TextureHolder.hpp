@@ -22,6 +22,7 @@ public:
         const std::string filename,
         const std::string key = ""); // if the key must be different
     const vk::Image& getImage(const std::string id) const;
+    const vk::ImageLayout getImageLayout(const std::string id) const;
     const vk::ImageView& getImageView(const std::string id) const;
 
     void destroy();
