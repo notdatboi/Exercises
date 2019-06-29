@@ -1,8 +1,15 @@
 #version 460 core
 #extension GL_ARB_separate_shader_objects : enable
-layout(location = 0) in vec3 fragCoords;
+/*layout(location = 0) in vec3 fragCoords;
 layout(location = 1) in vec2 uv;
-layout(location = 2) in vec3 normal;
+layout(location = 2) in vec3 normal;*/
+
+layout(location = 0) in InterpolatedVertexData
+{
+    vec3 coords;
+    vec3 normal;
+    vec2 uv;
+} interpolated;
 
 layout(set = 1, binding = 0) uniform Camera
 {
@@ -70,14 +77,14 @@ void main(void)
     light.attenuationLinear = 0.09f;
     light.attenuationQuadratic = 0.032f;
 
-    vec3 norm = normalize(normal);
-    vec3 fragToLight = normalize(light.emitterPosition - fragCoords);
-    vec3 fragToCamera = normalize(camera.pos - fragCoords);
+    vec3 norm = normalize(interpolated.normal);
+    vec3 fragToLight = normalize(light.emitterPosition - interpolated.coords);
+    vec3 fragToCamera = normalize(camera.pos - interpolated.coords);
 
-    float dist = distance(light.emitterPosition, fragCoords);
+    float dist = distance(light.emitterPosition, interpolated.coords);
     float attenuation = 1.0 / (light.attenuationConstant + light.attenuationLinear * dist + light.attenuationQuadratic * dist * dist);
 
-    vec4 textureColor = texture(txt, uv);
+    vec4 textureColor = texture(txt, interpolated.uv);
     vec4 ambientLight = vec4(0.1, 0.1, 0.1, 1) * textureColor;
     vec4 diffuseLight = calculateDiffuse(textureColor, norm, fragToLight, light.power);
     vec4 specularLight = calculateSpecular(textureColor, norm, fragToLight, fragToCamera, 32, light.power);
@@ -90,7 +97,7 @@ void main(void)
     {
         vec4 flashlightDiffuse = calculateDiffuse(textureColor, norm, fragToCamera, 0.2);
         vec4 flashlightSpecular = calculateSpecular(textureColor, norm, fragToCamera, fragToCamera, 32, 0.2);
-        float distToFlashlight = distance(fragCoords, camera.pos);
+        float distToFlashlight = distance(interpolated.coords, camera.pos);
         float flashlightAttenuation = 1.0 / (light.attenuationConstant + light.attenuationLinear * distToFlashlight + light.attenuationQuadratic * distToFlashlight * distToFlashlight);
         flashlightLight = (flashlightDiffuse + flashlightSpecular) * flashlightAttenuation * flashlightIntensity;
     }
