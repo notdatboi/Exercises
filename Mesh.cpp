@@ -2,7 +2,7 @@
 
 void Mesh::create(const std::vector<Vertex>& vertices, 
     const std::vector<uint32_t>& indices, 
-    const std::vector<const vk::DescriptorSet*>& descriptorSets,
+    const std::vector<vk::DescriptorSet>& descriptorSets,
     const spk::Pipeline* pipeline)
 {
     const auto& logicalDevice = spk::system::System::getInstance()->getLogicalDevice();
@@ -94,12 +94,7 @@ const Mesh& Mesh::bindPipeline(spk::Subpass& subpass) const
 
 const Mesh& Mesh::bindDescriptorSets(spk::Subpass& subpass, const uint32_t firstSetToUpdate = 0) const
 {
-    std::vector<vk::DescriptorSet> sets;
-    for(const auto* setPtr : descriptorSets)
-    {
-        sets.push_back(*setPtr);
-    }
-    subpass.bindDescriptorSets(pipeline->getLayout(), sets, firstSetToUpdate);
+    subpass.bindDescriptorSets(pipeline->getLayout(), descriptorSets, firstSetToUpdate);
 
     return *this;
 }

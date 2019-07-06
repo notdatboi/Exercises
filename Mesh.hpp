@@ -22,7 +22,7 @@ class Mesh
 public:
     void create(const std::vector<Vertex>& vertices, 
         const std::vector<uint32_t>& indices, 
-        const std::vector<const vk::DescriptorSet*>& descriptorSets,
+        const std::vector<vk::DescriptorSet>& descriptorSets,
         const spk::Pipeline* pipeline);
     const Mesh& bindVertexBuffer(spk::Subpass& subpass) const;
     const Mesh& bindIndexBuffer(spk::Subpass& subpass) const;
@@ -35,7 +35,7 @@ public:
     ~Mesh();
 private:
     const spk::Pipeline* pipeline;
-    std::vector<const vk::DescriptorSet*> descriptorSets;
+    std::vector<vk::DescriptorSet> descriptorSets;
     void writeBuffers(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices);
     vk::Fence bufferUpdateFences[2];            // vertex, index
     vk::CommandBuffer bufferUpdateCBs[2];       // vertex, index
