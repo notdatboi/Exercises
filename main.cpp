@@ -3,12 +3,11 @@
 int main()
 {
     glfwInit();
-    std::vector<const char*> glfwExtensions;
     uint32_t count = 0;
     glfwGetRequiredInstanceExtensions(&count);
-    glfwExtensions.resize(count);
-    glfwExtensions.data = glfwGetRequiredInstanceExtensions(&count);
-    spk::system::init(glfwExtensions);
+    const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&count);
+    std::vector<const char*> glfwExtensionsVector(glfwExtensions, glfwExtensions + count);
+    spk::system::init(glfwExtensionsVector);
     Application* app = new Application();
     app->run();
     delete app;

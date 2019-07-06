@@ -92,21 +92,21 @@ const Mesh& Mesh::bindPipeline(spk::Subpass& subpass) const
     return *this;
 }
 
-const Mesh& Mesh::bindDescriptorSets(spk::Subpass& subpass, const uint32_t firstSetToUpdate = 0) const
+const Mesh& Mesh::bindDescriptorSets(spk::Subpass& subpass, const uint32_t firstSetToUpdate) const
 {
     subpass.bindDescriptorSets(pipeline->getLayout(), descriptorSets, firstSetToUpdate);
 
     return *this;
 }
 
-const Mesh& Mesh::draw(spk::Subpass& subpass, const uint32_t instanceCount = 1, const uint32_t firstInstance = 0) const
+const Mesh& Mesh::draw(spk::Subpass& subpass, const uint32_t instanceCount, const uint32_t firstInstance) const
 {
     subpass.draw(vertexCount, instanceCount, 0, firstInstance);
 
     return *this;
 }
 
-const Mesh& Mesh::drawIndexed(spk::Subpass& subpass, const uint32_t instanceCount = 1, const uint32_t firstInstance = 0) const
+const Mesh& Mesh::drawIndexed(spk::Subpass& subpass, const uint32_t instanceCount, const uint32_t firstInstance) const
 {
     if(indexCount == 0) throw std::runtime_error("There are no indices to draw.\n");
     subpass.drawIndexed(indexCount, instanceCount, 0, firstInstance);
@@ -129,4 +129,9 @@ void Mesh::destroy()
     {
         logicalDevice.freeCommandBuffers(pool, 2, bufferUpdateCBs);
     }
+}
+    
+Mesh::~Mesh()
+{
+    destroy();
 }

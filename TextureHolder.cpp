@@ -36,7 +36,7 @@ TextureHolder& TextureHolder::addTexture(const vk::Format format,
 
     if(textures.count(name)) throw std::invalid_argument("Trying to create existing texture.\n");
 
-    textures[name].image.create({width, height, 1}, format, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferDst, vk::ImageAspectFlagBits::eColor);
+    textures[name].image.create({static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1}, format, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferDst, vk::ImageAspectFlagBits::eColor);
     textures[name].image.bindMemory();
     textures[name].image.changeLayout(textures[name].layoutChangeCommandBuffer, 
         vk::ImageLayout::eTransferDstOptimal, 
@@ -124,4 +124,9 @@ void TextureHolder::destroy()
             pair.second.layoutChangeCommandBuffer = vk::CommandBuffer();
         }
     }
+}
+
+TextureHolder::~TextureHolder()
+{
+    destroy();
 }
