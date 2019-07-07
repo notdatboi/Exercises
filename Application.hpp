@@ -3,7 +3,7 @@
 
 #include"Mesh.hpp"
 //#include<map>
-//#include<string>
+#include<string>
 #define GLFW_INCLUDE_VULKAN
 #include<GLFW/glfw3.h>
 //#include<Spark.hpp>
@@ -67,7 +67,7 @@ private:
     const uint32_t textureSetIndex = 3;
 
     const uint32_t gBufferPassID = 0;
-    const vk::Format swapchainImageFormat = vk::Format::eR8G8B8A8Snorm;
+    vk::Format swapchainImageFormat = vk::Format::eR8G8B8A8Snorm;
     
     GLFWwindow* window;
     vk::SurfaceKHR surface;

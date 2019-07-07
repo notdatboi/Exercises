@@ -122,7 +122,7 @@ void Application::loadAndWriteDonutTexture()
 
 void Application::loadShaders()
 {
-    std::vector<spk::ShaderInfo> shaderInfos;
+    std::vector<spk::ShaderInfo> shaderInfos(2);
     shaderInfos[0].filename = "vert.spv";
     shaderInfos[0].type = vk::ShaderStageFlagBits::eVertex;
     shaderInfos[1].filename = "frag.spv";
@@ -139,7 +139,7 @@ void Application::createGBufferPass()
     gBufferPass.create(gBufferPassID, 
         std::vector<vk::AttachmentReference>(), 
         colorAttachmentReferences, 
-        vk::AttachmentReference(), 
+        nullptr,
         {}, 
         vk::PipelineStageFlagBits::eFragmentShader | vk::PipelineStageFlagBits::eVertexShader, 
         vk::AccessFlagBits::eColorAttachmentWrite);
@@ -225,6 +225,9 @@ void Application::createGPassPipeline()
     rasterizationState.enableDepthClamp = false;
     rasterizationState.frontFace = vk::FrontFace::eClockwise;
 
+    spk::MultisampleState multisampleState;
+    multisampleState.rasterizationSampleCount = vk::SampleCountFlagBits::e1;
+
     spk::DepthStencilState depthStencilState;
     depthStencilState.enableDepthTest = false;        // change later
     depthStencilState.depthCompareOp = vk::CompareOp::eLess;
@@ -248,6 +251,7 @@ void Application::createGPassPipeline()
         assemblyState,
         viewportState,
         rasterizationState,
+        multisampleState,
         depthStencilState,
         colorBlendState,
         dynamicState,
