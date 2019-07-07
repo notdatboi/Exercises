@@ -260,7 +260,7 @@ void Application::createGPassPipeline()
 
 void Application::createFramebuffers()
 {
-    const auto imageViews = swapchain.getImageViews();
+    const auto& imageViews = swapchain.getImageViews();
     for(const auto view : imageViews)
     {
         renderPass.addFramebuffer({view.getView()}, {windowWidth, windowHeight});
