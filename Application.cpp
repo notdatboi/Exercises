@@ -5,24 +5,21 @@ Application::Application()
     createWindowAndSurface();
     createSwapchain();
     loadDescriptorSets();
+    createDescriptorBuffers();
     loadAndWriteDonutTexture();
     loadShaders();
     createGBufferPass();
     createRenderPass();
     createGPassPipeline();
-    createFramebuffers();
+//    createFramebuffers();
     loadDonutMesh("DonutWithStoneTexture.obj");
-    recordRenderPass();
-
     updateDonutInstancesDescriptorSet();
+    updateMVPDescriptorSet();
+    updateCameraDescriptorSet();
+    recordRenderPass();
 }
 
 void Application::run(){}
-
-Application::~Application()
-{
-    spk::system::deinit();
-}
 
 void Application::createWindowAndSurface()
 {
@@ -54,7 +51,7 @@ void Application::loadDescriptorSets()
         .setDescriptorCount(3);
     poolSizes[1].setType(vk::DescriptorType::eCombinedImageSampler)
         .setDescriptorCount(1);
-    descriptorPool.create(4, poolSizes);
+    descriptorPool.create(4, poolSizes, vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet);
 
     std::vector<vk::DescriptorSetLayoutBinding> uniformVertexB0C1(1);   // uniform buffer, vertex stage, binding = 0, count = 1; usage: mvp, Instances
     uniformVertexB0C1[0].setBinding(0)
@@ -93,7 +90,6 @@ void Application::loadAndWriteDonutTexture()
     textureHolder.addTexture(vk::Format::eR8G8B8A8Snorm, "textureWALL.jpg", "Wall");
     vk::DescriptorImageInfo imageInfo;
 
-    vk::Sampler sampler;
     vk::SamplerCreateInfo samplerInfo;
     samplerInfo.setMagFilter(vk::Filter::eNearest)
         .setMinFilter(vk::Filter::eNearest)
@@ -110,14 +106,12 @@ void Application::loadAndWriteDonutTexture()
         .setMaxLod(1.0f)
         .setBorderColor(vk::BorderColor::eFloatOpaqueBlack)
         .setUnnormalizedCoordinates(false);
-    if(logicalDevice.createSampler(&samplerInfo, nullptr, &sampler) != vk::Result::eSuccess) throw std::runtime_error("Failed to create sampler!\n");
+    if(logicalDevice.createSampler(&samplerInfo, nullptr, &donutSampler) != vk::Result::eSuccess) throw std::runtime_error("Failed to create sampler!\n");
 
     imageInfo.setImageLayout(textureHolder.getImageLayout("Wall"));
     imageInfo.setImageView(textureHolder.getImageView("Wall"));
-    imageInfo.setSampler(sampler);
+    imageInfo.setSampler(donutSampler);
     descriptorPool.writeDescriptorSetImage(textureSetIndex, 0, vk::DescriptorType::eCombinedImageSampler, imageInfo);
-
-    logicalDevice.destroySampler(sampler, nullptr);     // do we need to keep it alive?
 }
 
 void Application::loadShaders()
@@ -258,14 +252,14 @@ void Application::createGPassPipeline()
         additionalInfo);
 }
 
-void Application::createFramebuffers()
+/*void Application::createFramebuffers()
 {
     const auto& imageViews = swapchain.getImageViews();
     for(const auto view : imageViews)
     {
         renderPass.addFramebuffer({view.getView()}, {windowWidth, windowHeight});
     }
-}
+}*/
 
 void Application::getMeshVertexData(const aiMesh* mesh, std::vector<Vertex>& vertices) const
 {
@@ -341,9 +335,10 @@ void Application::recordRenderPass()
         vk::Rect2D renderArea;
         renderArea.setExtent({windowWidth, windowHeight})
             .setOffset({0, 0});
-        renderPass.beginRecording(currentFramebufferIndex, 1, renderArea);
-        renderPass.nextSubpass(gBufferPass.getSecondaryCommandBuffer(currentFramebufferIndex));
-        renderPass.endRecording();
+        renderPass.beginRecording(currentFramebufferIndex, 1, renderArea)
+            //.nextSubpass(gBufferPass.getSecondaryCommandBuffer(currentFramebufferIndex))
+            .executeCommandBuffer(gBufferPass.getSecondaryCommandBuffer(currentFramebufferIndex))
+            .endRecording();
     }
 }
 
@@ -357,6 +352,9 @@ void Application::createDescriptorBuffers()
     mvpBuffer.create(sizeof(MVP), vk::BufferUsageFlagBits::eUniformBuffer, false, false);
     cameraBuffer.create(sizeof(glm::vec4) * 2, vk::BufferUsageFlagBits::eUniformBuffer, false, false);
     donutInstancesBuffer.create(sizeof(glm::vec4) * 2, vk::BufferUsageFlagBits::eUniformBuffer, false, false);
+    mvpBuffer.bindMemory();
+    cameraBuffer.bindMemory();
+    donutInstancesBuffer.bindMemory();
 }
 
 void Application::updateMVPDescriptorSet()
@@ -373,7 +371,7 @@ void Application::updateMVPDescriptorSet()
 
 void Application::updateCameraDescriptorSet()
 {
-    std::vector<glm::vec4> data;
+    std::vector<glm::vec4> data(2);
     data[0] = glm::vec4(camera.getPosition(), 0);
     data[1] = glm::vec4(camera.getNormalizedDirection(), 0);
     cameraBuffer.updateCPUAccessible(reinterpret_cast<const void*>(data.data()));
@@ -396,4 +394,20 @@ void Application::updateDonutInstancesDescriptorSet()
         .setRange(VK_WHOLE_SIZE);
 
     descriptorPool.writeDescriptorSetBuffer(donutInstancesSetIndex, 0, vk::DescriptorType::eUniformBuffer, info);
+}
+
+void Application::destroy()
+{
+    // TODO: destroy everything else too
+    const auto& logicalDevice = spk::system::System::getInstance()->getLogicalDevice();
+    if(donutSampler)
+    {
+        logicalDevice.destroySampler(donutSampler, nullptr);
+        donutSampler = vk::Sampler();
+    }
+}
+
+Application::~Application()
+{
+    destroy();
 }

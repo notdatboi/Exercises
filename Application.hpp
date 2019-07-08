@@ -27,9 +27,12 @@ public:
     void run();
     ~Application();
 private:
+    void destroy();
+
     void createWindowAndSurface();
     void createSwapchain();
     void loadDescriptorSets();
+    void createDescriptorBuffers();
     void loadAndWriteDonutTexture();
     //void updateDescriptorSets();
     void loadShaders();
@@ -37,7 +40,7 @@ private:
     void createGBufferPass();
     void createRenderPass();        // and subpass dependency (l8r)
     void createGPassPipeline();
-    void createFramebuffers();
+    //void createFramebuffers();
     void loadDonutMesh(const std::string donutFilename);
     void recordRenderPass();
 
@@ -47,7 +50,6 @@ private:
     const std::vector<uint32_t> getMeshIndexData(const aiMesh* mesh) const;
 
     void processInput();
-    void createDescriptorBuffers();
     void updateMVPDescriptorSet();
     void updateCameraDescriptorSet();
     void updateDonutInstancesDescriptorSet();
@@ -57,7 +59,7 @@ private:
 
     MVP mvp;
     Camera camera;
-    std::vector<glm::vec4> donutInstances;
+    std::vector<glm::vec4> donutInstances = {{0, 0, 0, 0}, {2, 2, 2, 0}};
     spk::Buffer mvpBuffer;
     spk::Buffer cameraBuffer;
     spk::Buffer donutInstancesBuffer;
@@ -83,6 +85,7 @@ private:
     //vk::SubpassDependency depthToGBufferDependency;
     spk::RenderPass renderPass;
     spk::Image donutTexture;
+    vk::Sampler donutSampler;
     spk::ImageView donutTextureView;
     Mesh donut;
 };
