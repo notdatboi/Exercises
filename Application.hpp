@@ -12,6 +12,7 @@
 #include<assimp/Importer.hpp>
 #include<assimp/scene.h>
 #include<assimp/postprocess.h>
+#include<chrono>
 
 struct MVP
 {
@@ -29,6 +30,7 @@ public:
 private:
     void destroy();
 
+    void createSyncObjects();
     void createWindowAndSurface();
     void createSwapchain();
     void loadDescriptorSets();
@@ -49,13 +51,19 @@ private:
     void getMeshIndexData(const aiMesh* mesh, std::vector<uint32_t>& indices) const;
     const std::vector<uint32_t> getMeshIndexData(const aiMesh* mesh) const;
 
-    void processInput();
+    void processInput(const float elapsedTime);
     void updateMVPDescriptorSet();
     void updateCameraDescriptorSet();
     void updateDonutInstancesDescriptorSet();
+    void updateMVPBuffer();
+    void updateCameraBuffer();
+    void updateDonutInstancesBuffer();
 
     const unsigned int windowWidth = 1024;
     const unsigned int windowHeight = 720;
+    const double sensitivity = 0.05;
+    const double fps = 60;
+    const double frameTime = 1 / fps;
 
     MVP mvp;
     Camera camera;
@@ -78,6 +86,7 @@ private:
     spk::DescriptorPool descriptorPool;
     //spk::ShaderSet depthPrepassShaders;
     spk::ShaderSet gPassShaders;
+    vk::PipelineLayout gPassPipelineLayout;
     spk::Pipeline gPassPipeline;
     //std::vector<spk::Image> depthMaps;
     //spk::Subpass depthPrepass;
@@ -88,6 +97,11 @@ private:
     vk::Sampler donutSampler;
     spk::ImageView donutTextureView;
     Mesh donut;
+
+    vk::Semaphore imageAcquiredSemaphore;
+    vk::Semaphore imageRenderedSemaphore;
+    vk::Fence imageAcquiredFence;
+    vk::Fence imageRenderedFence;
 };
 
 #endif

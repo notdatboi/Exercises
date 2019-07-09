@@ -2,10 +2,14 @@
 
 Application::Application()
 {
+    createSyncObjects();
     createWindowAndSurface();
     createSwapchain();
     loadDescriptorSets();
     createDescriptorBuffers();
+    updateDonutInstancesDescriptorSet();
+    updateMVPDescriptorSet();
+    updateCameraDescriptorSet();
     loadAndWriteDonutTexture();
     loadShaders();
     createGBufferPass();
@@ -13,13 +17,88 @@ Application::Application()
     createGPassPipeline();
 //    createFramebuffers();
     loadDonutMesh("DonutWithStoneTexture.obj");
-    updateDonutInstancesDescriptorSet();
-    updateMVPDescriptorSet();
-    updateCameraDescriptorSet();
     recordRenderPass();
+
+    camera.setPosition({3, 3, 0});
+    camera.setRotation(0, 0);
 }
 
-void Application::run(){}
+void Application::run()
+{
+    const auto& logicalDevice = spk::system::System::getInstance()->getLogicalDevice();
+    const auto& graphicsQueue = spk::system::Executives::getInstance()->getGraphicsQueue();
+    const auto& presentQueue =  spk::system::Executives::getInstance()->getPresentQueue(surface);
+
+    auto startClock = std::chrono::system_clock::now();
+    double timeCounter = 0;
+
+    while(!glfwWindowShouldClose(window))
+    {
+        glfwPollEvents();
+        auto endClock = std::chrono::system_clock::now();
+        std::chrono::duration<double> elapsed = endClock - startClock;
+        timeCounter += elapsed.count();
+        startClock = endClock;
+
+        processInput(static_cast<float>(elapsed.count()));
+
+        if(timeCounter >= frameTime)
+        {
+            timeCounter -= frameTime;
+            //updateMVPDescriptorSet();
+            //updateCameraDescriptorSet();
+            updateMVPBuffer();
+            updateCameraBuffer();
+            const auto nextImageIndex = swapchain.acquireNextImageIndex(imageAcquiredSemaphore, imageAcquiredFence);
+            logicalDevice.waitForFences(1, &imageAcquiredFence, true, ~0U);
+            logicalDevice.resetFences(1, &imageAcquiredFence);
+
+            const auto& renderPassCommandBuffer = renderPass.getCommandBuffer(nextImageIndex);
+            vk::SubmitInfo renderPassSubmitInfo;
+            vk::PipelineStageFlags waitDstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+            renderPassSubmitInfo.setWaitSemaphoreCount(1)
+                .setPWaitSemaphores(&imageAcquiredSemaphore)
+                .setCommandBufferCount(1)
+                .setPCommandBuffers(&renderPassCommandBuffer)
+                .setSignalSemaphoreCount(1)
+                .setPSignalSemaphores(&imageRenderedSemaphore)
+                .setPWaitDstStageMask(&waitDstStageMask);
+            graphicsQueue.submit(1, &renderPassSubmitInfo, imageRenderedFence);
+            logicalDevice.waitForFences(1, &imageRenderedFence, true, ~0U);
+            logicalDevice.resetFences(1, &imageRenderedFence);
+            
+            std::vector<vk::Result> presentResults(1);
+            vk::PresentInfoKHR presentInfo;
+            presentInfo.setWaitSemaphoreCount(1)
+                .setPWaitSemaphores(&imageRenderedSemaphore)
+                .setSwapchainCount(1)
+                .setPSwapchains(&swapchain.getSwapchain())
+                .setPImageIndices(&nextImageIndex)
+                .setPResults(presentResults.data());
+            for(auto result : presentResults)
+            {
+                if(result != vk::Result::eSuccess) throw std::runtime_error("Failed to perform presentation.\n");
+            }
+            presentQueue.second->presentKHR(&presentInfo);
+            std::cout << "Camera: "
+                << camera.getPosition().x << ' ' << camera.getPosition().y << ' ' << camera.getPosition().z << '\n'
+                << camera.getNormalizedDirection().x << ' ' << camera.getNormalizedDirection().y << ' ' << camera.getNormalizedDirection().z << '\n';
+        }
+    }
+}
+
+void Application::createSyncObjects()
+{
+    const auto& logicalDevice = spk::system::System::getInstance()->getLogicalDevice();
+
+    vk::SemaphoreCreateInfo semaphoreInfo;
+    if(logicalDevice.createSemaphore(&semaphoreInfo, nullptr, &imageAcquiredSemaphore) != vk::Result::eSuccess) throw std::runtime_error("Failed to create semaphore!\n");
+    if(logicalDevice.createSemaphore(&semaphoreInfo, nullptr, &imageRenderedSemaphore) != vk::Result::eSuccess) throw std::runtime_error("Failed to create semaphore!\n");
+
+    vk::FenceCreateInfo unsignaledFenceInfo;
+    if(logicalDevice.createFence(&unsignaledFenceInfo, nullptr, &imageAcquiredFence) != vk::Result::eSuccess) throw std::runtime_error("Failed to create fence!\n");
+    if(logicalDevice.createFence(&unsignaledFenceInfo, nullptr, &imageRenderedFence) != vk::Result::eSuccess) throw std::runtime_error("Failed to create fence!\n");
+}
 
 void Application::createWindowAndSurface()
 {
@@ -235,8 +314,10 @@ void Application::createGPassPipeline()
 
     spk::DynamicState dynamicState;
 
+    gPassPipelineLayout = descriptorPool.getPipelineLayout({0, 2, 0, 1});
+
     spk::AdditionalInfo additionalInfo;
-    additionalInfo.layout = descriptorPool.getPipelineLayout({0, 2, 0, 1});
+    additionalInfo.layout = gPassPipelineLayout;
     additionalInfo.renderPass = renderPass.getRenderPass();
     additionalInfo.subpassIndex = gBufferPassID;
 
@@ -342,9 +423,42 @@ void Application::recordRenderPass()
     }
 }
 
-void Application::processInput()
+void Application::processInput(const float elapsedTime)
 {
+    double cursorX, cursorY;
+    glfwGetCursorPos(window, &cursorX, &cursorY);
+    static double prevCursorX = windowWidth / 2;
+    static double prevCursorY = windowHeight / 2;
+    double offsetX = (cursorX - prevCursorX) * sensitivity, offsetY = (cursorY - prevCursorY) * sensitivity;
+    camera.rotate(offsetX, offsetY);
+    prevCursorX = cursorX;
+    prevCursorY = cursorY;
 
+    const auto direction = camera.getNormalizedDirection();
+    static const glm::vec3 up(0, 0, 1);
+    int WState = glfwGetKey(window, GLFW_KEY_W);
+    int AState = glfwGetKey(window, GLFW_KEY_A);
+    int SState = glfwGetKey(window, GLFW_KEY_S);
+    int DState = glfwGetKey(window, GLFW_KEY_D);
+    glm::vec3 cameraShift({0, 0, 0});
+    if(WState == GLFW_PRESS)
+    {
+        cameraShift += direction * elapsedTime;
+    }
+    if(SState == GLFW_PRESS)
+    {
+        cameraShift -= direction * elapsedTime;
+    }
+    if(AState == GLFW_PRESS)
+    {
+        cameraShift += glm::normalize(glm::cross(up, direction)) * elapsedTime;
+    }
+    if(DState == GLFW_PRESS)
+    {
+        cameraShift -= glm::normalize(glm::cross(up, direction)) * elapsedTime;
+    }
+    camera.move(cameraShift.x, cameraShift.y, cameraShift.z);
+    mvp.view = glm::lookAt(camera.getPosition(), camera.getPosition() + camera.getNormalizedDirection(), up);
 }
 
 void Application::createDescriptorBuffers()
@@ -359,7 +473,7 @@ void Application::createDescriptorBuffers()
 
 void Application::updateMVPDescriptorSet()
 {
-    mvpBuffer.updateCPUAccessible(reinterpret_cast<const void*>(&mvp));
+    updateMVPBuffer();
 
     vk::DescriptorBufferInfo info;
     info.setBuffer(mvpBuffer.getBuffer())
@@ -371,10 +485,7 @@ void Application::updateMVPDescriptorSet()
 
 void Application::updateCameraDescriptorSet()
 {
-    std::vector<glm::vec4> data(2);
-    data[0] = glm::vec4(camera.getPosition(), 0);
-    data[1] = glm::vec4(camera.getNormalizedDirection(), 0);
-    cameraBuffer.updateCPUAccessible(reinterpret_cast<const void*>(data.data()));
+    updateCameraBuffer();
 
     vk::DescriptorBufferInfo info;
     info.setBuffer(cameraBuffer.getBuffer())
@@ -386,7 +497,7 @@ void Application::updateCameraDescriptorSet()
 
 void Application::updateDonutInstancesDescriptorSet()
 {
-    donutInstancesBuffer.updateCPUAccessible(reinterpret_cast<const void*>(donutInstances.data()));
+    updateDonutInstancesBuffer();
 
     vk::DescriptorBufferInfo info;
     info.setBuffer(donutInstancesBuffer.getBuffer())
@@ -396,14 +507,56 @@ void Application::updateDonutInstancesDescriptorSet()
     descriptorPool.writeDescriptorSetBuffer(donutInstancesSetIndex, 0, vk::DescriptorType::eUniformBuffer, info);
 }
 
+void Application::updateMVPBuffer()
+{
+    mvpBuffer.updateCPUAccessible(reinterpret_cast<const void*>(&mvp));
+}
+
+void Application::updateCameraBuffer()
+{
+    std::vector<glm::vec4> data(2);
+    data[0] = glm::vec4(camera.getPosition(), 0);
+    data[1] = glm::vec4(camera.getNormalizedDirection(), 0);
+    cameraBuffer.updateCPUAccessible(reinterpret_cast<const void*>(data.data()));
+}
+
+void Application::updateDonutInstancesBuffer()
+{
+    donutInstancesBuffer.updateCPUAccessible(reinterpret_cast<const void*>(donutInstances.data()));
+}
+
 void Application::destroy()
 {
     // TODO: destroy everything else too
     const auto& logicalDevice = spk::system::System::getInstance()->getLogicalDevice();
+    if(gPassPipelineLayout)
+    {
+        descriptorPool.destroyPipelineLayout(gPassPipelineLayout);
+    }
     if(donutSampler)
     {
         logicalDevice.destroySampler(donutSampler, nullptr);
         donutSampler = vk::Sampler();
+    }
+    if(imageAcquiredFence)
+    {
+        logicalDevice.destroyFence(imageAcquiredFence, nullptr);
+        imageAcquiredFence = vk::Fence();
+    }
+    if(imageRenderedFence)
+    {
+        logicalDevice.destroyFence(imageRenderedFence, nullptr);
+        imageRenderedFence = vk::Fence();
+    }
+    if(imageAcquiredSemaphore)
+    {
+        logicalDevice.destroySemaphore(imageAcquiredSemaphore, nullptr);
+        imageAcquiredSemaphore = vk::Semaphore();
+    }
+    if(imageRenderedSemaphore)
+    {
+        logicalDevice.destroySemaphore(imageRenderedSemaphore, nullptr);
+        imageRenderedSemaphore = vk::Semaphore();
     }
 }
 

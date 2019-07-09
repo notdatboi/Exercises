@@ -6,8 +6,8 @@ Camera::Camera(const glm::vec3 initialPosition, const float initialYaw, const fl
 
 Camera& Camera::rotate(const float yaw, const float pitch)
 {
-    this->yaw = yaw;
-    this->pitch = pitch;
+    this->yaw += yaw;
+    this->pitch += pitch;
     if(this->pitch < -89.0) this->pitch = -89.0;
     if(this->pitch > 89.0) this->pitch = 89.0;
 
@@ -34,6 +34,8 @@ Camera& Camera::setRotation(const float yaw, const float pitch)
 {
     this->yaw = yaw;
     this->pitch = pitch;
+    if(this->pitch < -89.0) this->pitch = -89.0;
+    if(this->pitch > 89.0) this->pitch = 89.0;
 
     return *this;
 }
