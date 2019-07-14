@@ -2,6 +2,10 @@
 
 Application::Application()
 {
+    mvp.model = glm::mat4(1);
+    mvp.proj = glm::perspective(glm::radians<float>(60), windowWidth / (float)windowHeight, 0.1f, 10.f);
+    mvp.proj[1][1] = -mvp.proj[1][1];
+
     createSyncObjects();
     createWindowAndSurface();
     createSwapchain();
@@ -45,8 +49,6 @@ void Application::run()
         if(timeCounter >= frameTime)
         {
             timeCounter -= frameTime;
-            //updateMVPDescriptorSet();
-            //updateCameraDescriptorSet();
             updateMVPBuffer();
             updateCameraBuffer();
             const auto nextImageIndex = swapchain.acquireNextImageIndex(imageAcquiredSemaphore, imageAcquiredFence);
@@ -63,7 +65,7 @@ void Application::run()
                 .setSignalSemaphoreCount(1)
                 .setPSignalSemaphores(&imageRenderedSemaphore)
                 .setPWaitDstStageMask(&waitDstStageMask);
-            graphicsQueue.submit(1, &renderPassSubmitInfo, imageRenderedFence);
+            if(graphicsQueue.submit(1, &renderPassSubmitInfo, imageRenderedFence) != vk::Result::eSuccess) throw std::runtime_error("Failed to submit graphics commands.\n");
             logicalDevice.waitForFences(1, &imageRenderedFence, true, ~0U);
             logicalDevice.resetFences(1, &imageRenderedFence);
             
@@ -79,10 +81,10 @@ void Application::run()
             {
                 if(result != vk::Result::eSuccess) throw std::runtime_error("Failed to perform presentation.\n");
             }
-            presentQueue.second->presentKHR(&presentInfo);
-            std::cout << "Camera: "
-                << camera.getPosition().x << ' ' << camera.getPosition().y << ' ' << camera.getPosition().z << '\n'
-                << camera.getNormalizedDirection().x << ' ' << camera.getNormalizedDirection().y << ' ' << camera.getNormalizedDirection().z << '\n';
+            if(presentQueue.second->presentKHR(&presentInfo) != vk::Result::eSuccess) throw std::runtime_error("Failed to submit presentation commands.\n");
+            //std::cout << "Camera: "
+            //    << camera.getPosition().x << ' ' << camera.getPosition().y << ' ' << camera.getPosition().z << '\n'
+            //    << camera.getNormalizedDirection().x << ' ' << camera.getNormalizedDirection().y << ' ' << camera.getNormalizedDirection().z << '\n';
         }
     }
 }
@@ -166,7 +168,7 @@ void Application::loadAndWriteDonutTexture()
 {
     const auto& logicalDevice = spk::system::System::getInstance()->getLogicalDevice();
 
-    textureHolder.addTexture(vk::Format::eR8G8B8A8Snorm, "textureWALL.jpg", "Wall");
+    textureHolder.addTexture(vk::Format::eR8G8B8A8Unorm, "textureWALL.jpg", "Wall");
     vk::DescriptorImageInfo imageInfo;
 
     vk::SamplerCreateInfo samplerInfo;
@@ -296,7 +298,7 @@ void Application::createGPassPipeline()
     spk::RasterizationState rasterizationState;
     rasterizationState.cullMode = vk::CullModeFlagBits::eBack;
     rasterizationState.enableDepthClamp = false;
-    rasterizationState.frontFace = vk::FrontFace::eClockwise;
+    rasterizationState.frontFace = vk::FrontFace::eCounterClockwise;
 
     spk::MultisampleState multisampleState;
     multisampleState.rasterizationSampleCount = vk::SampleCountFlagBits::e1;
@@ -332,15 +334,6 @@ void Application::createGPassPipeline()
         dynamicState,
         additionalInfo);
 }
-
-/*void Application::createFramebuffers()
-{
-    const auto& imageViews = swapchain.getImageViews();
-    for(const auto view : imageViews)
-    {
-        renderPass.addFramebuffer({view.getView()}, {windowWidth, windowHeight});
-    }
-}*/
 
 void Application::getMeshVertexData(const aiMesh* mesh, std::vector<Vertex>& vertices) const
 {
@@ -390,7 +383,7 @@ const std::vector<uint32_t> Application::getMeshIndexData(const aiMesh* mesh) co
 void Application::loadDonutMesh(const std::string donutFilename)
 {
     Assimp::Importer importer;
-    const aiScene* scene = importer.ReadFile(donutFilename, aiProcess_Triangulate);
+    const aiScene* scene = importer.ReadFile(donutFilename, aiProcess_JoinIdenticalVertices/*aiProcess_Triangulate*/);
     if(!scene) throw std::runtime_error("Failed to load scene.\n");
     std::vector<Vertex> donutVertices = getMeshVertexData(*(scene->mMeshes + 1));
     std::vector<uint32_t> donutIndices = getMeshIndexData(*(scene->mMeshes + 1));

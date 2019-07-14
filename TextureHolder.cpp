@@ -28,7 +28,7 @@ TextureHolder& TextureHolder::addTexture(const vk::Format format,
     if(logicalDevice.createSemaphore(&semaphoreInfo, nullptr, &textures[name].imageUpdatedSemaphore) != vk::Result::eSuccess) throw std::runtime_error("Failed to create semaphore!\n");
 
     int width, height, channels;
-    unsigned char * imageData = stbi_load(filename.c_str(), &width, &height, &channels, 4);
+    unsigned char* imageData = stbi_load(filename.c_str(), &width, &height, &channels, 4);
     channels = 4; // because channel count returns 3
 
     spk::Buffer temporaryStorage;
