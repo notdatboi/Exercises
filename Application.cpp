@@ -283,7 +283,7 @@ void Application::createRenderPass()        // and subpass dependency (l8r)
         .setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
     attachments[1].setFormat(depthMapFormat)
         .setSamples(vk::SampleCountFlagBits::e1)
-        .setLoadOp(vk::AttachmentLoadOp::eDontCare)
+        .setLoadOp(vk::AttachmentLoadOp::eClear)
         .setStoreOp(vk::AttachmentStoreOp::eDontCare)
         .setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
         .setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
@@ -368,7 +368,7 @@ void Application::createGPassPipeline()
     spk::DepthStencilState depthStencilState;
     depthStencilState.enableDepthTest = true;
     depthStencilState.depthCompareOp = vk::CompareOp::eLess;
-    depthStencilState.writeTestResults = false;
+    depthStencilState.writeTestResults = true;
 
     vk::PipelineColorBlendAttachmentState colorBlendAttachmentState;
     colorBlendAttachmentState.setBlendEnable(false)
@@ -471,7 +471,10 @@ void Application::recordRenderPass()
         vk::Rect2D renderArea;
         renderArea.setExtent({windowWidth, windowHeight})
             .setOffset({0, 0});
-        renderPass.beginRecording(currentFramebufferIndex, 1, renderArea)
+        std::vector<vk::ClearValue> clearVals(2);
+        clearVals[0].setColor(vk::ClearColorValue());
+        clearVals[1].setDepthStencil(vk::ClearDepthStencilValue(1.0f));
+        renderPass.beginRecording(currentFramebufferIndex, clearVals, renderArea)
             //.nextSubpass(gBufferPass.getSecondaryCommandBuffer(currentFramebufferIndex))
             .executeCommandBuffer(gBufferPass.getSecondaryCommandBuffer(currentFramebufferIndex))
             .endRecording();
