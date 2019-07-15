@@ -15,6 +15,7 @@ Application::Application()
     updateMVPDescriptorSet();
     updateCameraDescriptorSet();
     loadAndWriteDonutTexture();
+    createDepthMaps();
     loadShaders();
     createGBufferPass();
     createRenderPass();
@@ -23,8 +24,8 @@ Application::Application()
     loadDonutMesh("DonutWithStoneTexture.obj");
     recordRenderPass();
 
-    camera.setPosition({3, 3, 0});
-    camera.setRotation(0, 0);
+    camera.setPosition({2, 2, 0});
+    camera.setRotation(180.f, 0);
 }
 
 void Application::run()
@@ -195,6 +196,51 @@ void Application::loadAndWriteDonutTexture()
     descriptorPool.writeDescriptorSetImage(textureSetIndex, 0, vk::DescriptorType::eCombinedImageSampler, imageInfo);
 }
 
+void Application::createDepthMaps()
+{
+    const auto& logicalDevice = spk::system::System::getInstance()->getLogicalDevice();
+    const auto& commandPool = spk::system::Executives::getInstance()->getPool();
+
+    depthMaps.resize(swapchain.getImageViews().size());
+    depthMapImageViews.resize(depthMaps.size());
+    std::vector<vk::CommandBuffer> layoutChangeCBs(depthMaps.size());
+    std::vector<vk::Fence> layoutChangedFences(layoutChangeCBs.size());
+    vk::CommandBufferAllocateInfo allocInfo;
+    allocInfo.setCommandBufferCount(layoutChangeCBs.size())
+        .setCommandPool(commandPool)
+        .setLevel(vk::CommandBufferLevel::ePrimary);
+    if(logicalDevice.allocateCommandBuffers(&allocInfo, layoutChangeCBs.data()) != vk::Result::eSuccess) throw std::runtime_error("Failed to allocate command buffers!\n");
+    vk::FenceCreateInfo fenceInfo;
+    for(auto& fence : layoutChangedFences)
+    {
+        if(logicalDevice.createFence(&fenceInfo, nullptr, &fence) != vk::Result::eSuccess) throw std::runtime_error("Failed to allocate fence!\n");
+    }
+
+    auto fmt = spk::Image::getSupportedFormat({vk::Format::eD16UnormS8Uint, vk::Format::eD24UnormS8Uint, vk::Format::eD32SfloatS8Uint}, vk::ImageTiling::eOptimal, vk::FormatFeatureFlagBits::eDepthStencilAttachment);
+    if(!fmt.has_value()) throw std::runtime_error("Can't choose format for depth map.\n");
+    depthMapFormat = fmt.value();
+
+    for(auto& depthMap : depthMaps)
+    {
+        depthMap.create({windowWidth, windowHeight, 1}, depthMapFormat, vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil);
+    }
+    int index = 0;
+    for(auto& depthMap : depthMaps)
+    {
+        depthMap.bindMemory();
+        depthMap.changeLayout(layoutChangeCBs[index], vk::ImageLayout::eDepthStencilAttachmentOptimal, vk::Semaphore(), vk::Semaphore(), vk::Fence(), layoutChangedFences[index], true);
+        depthMapImageViews[index].create(depthMap.getImage(), depthMapFormat, depthMap.getSubresource());
+        ++index;
+    }
+
+    logicalDevice.waitForFences(layoutChangedFences.size(), layoutChangedFences.data(), true, ~0U);
+    logicalDevice.freeCommandBuffers(commandPool, layoutChangeCBs.size(), layoutChangeCBs.data());
+    for(auto& fence : layoutChangedFences)
+    {
+        logicalDevice.destroyFence(fence, nullptr);
+    }
+}
+
 void Application::loadShaders()
 {
     std::vector<spk::ShaderInfo> shaderInfos(2);
@@ -210,11 +256,15 @@ void Application::createGBufferPass()
     std::vector<vk::AttachmentReference> colorAttachmentReferences(1);
     colorAttachmentReferences[0].setAttachment(0)
         .setLayout(vk::ImageLayout::eColorAttachmentOptimal);
+    
+    vk::AttachmentReference depthAttachmentReference;
+    depthAttachmentReference.setAttachment(1)
+        .setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
     gBufferPass.create(gBufferPassID, 
-        std::vector<vk::AttachmentReference>(), 
+        {}, 
         colorAttachmentReferences, 
-        nullptr,
+        &depthAttachmentReference,
         {}, 
         vk::PipelineStageFlagBits::eFragmentShader | vk::PipelineStageFlagBits::eVertexShader, 
         vk::AccessFlagBits::eColorAttachmentWrite);
@@ -222,7 +272,7 @@ void Application::createGBufferPass()
 
 void Application::createRenderPass()        // and subpass dependency (l8r)
 {
-    std::vector<vk::AttachmentDescription> attachments(1);
+    std::vector<vk::AttachmentDescription> attachments(2);
     attachments[0].setFormat(swapchainImageFormat)
         .setSamples(vk::SampleCountFlagBits::e1)
         .setLoadOp(vk::AttachmentLoadOp::eClear)
@@ -231,17 +281,29 @@ void Application::createRenderPass()        // and subpass dependency (l8r)
         .setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
         .setInitialLayout(vk::ImageLayout::eUndefined)
         .setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
+    attachments[1].setFormat(depthMapFormat)
+        .setSamples(vk::SampleCountFlagBits::e1)
+        .setLoadOp(vk::AttachmentLoadOp::eDontCare)
+        .setStoreOp(vk::AttachmentStoreOp::eDontCare)
+        .setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
+        .setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
+        .setInitialLayout(vk::ImageLayout::eUndefined)
+        .setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+
     std::vector<vk::SubpassDescription> descriptions(1);
     descriptions[0] = gBufferPass.getDescription();
     std::vector<vk::SubpassDependency> dependencies;
     renderPass.create(attachments, descriptions, dependencies);
 
     const auto& swapchainImageViews = swapchain.getImageViews();
+    int index = 0;
     for(const auto& view : swapchainImageViews)
     {
-        std::vector<vk::ImageView> framebufferAttachments(1);
+        std::vector<vk::ImageView> framebufferAttachments(2);
         framebufferAttachments[0] = view.getView();
+        framebufferAttachments[1] = depthMapImageViews[index].getView();
         renderPass.addFramebuffer(framebufferAttachments, {windowWidth, windowHeight});
+        ++index;
     }
 
     // continue later
@@ -304,9 +366,9 @@ void Application::createGPassPipeline()
     multisampleState.rasterizationSampleCount = vk::SampleCountFlagBits::e1;
 
     spk::DepthStencilState depthStencilState;
-    depthStencilState.enableDepthTest = false;        // change later
+    depthStencilState.enableDepthTest = true;
     depthStencilState.depthCompareOp = vk::CompareOp::eLess;
-    depthStencilState.writeTestResults = false;       // too
+    depthStencilState.writeTestResults = false;
 
     vk::PipelineColorBlendAttachmentState colorBlendAttachmentState;
     colorBlendAttachmentState.setBlendEnable(false)

@@ -13,10 +13,10 @@ class Camera
 public:
     Camera();
     Camera(const glm::vec3 initialPosition, const float initialYaw, const float initialPitch);
-    Camera& rotate(const float yaw, const float pitch);
+    Camera& rotate(const float yaw, const float pitch);                                         // in degrees
     Camera& move(const float shiftX, const float shiftY, const float shiftZ);
-    Camera& setPosition(const glm::vec3 position);
-    Camera& setRotation(const float yaw, const float pitch);
+    Camera& setPosition(const glm::vec3 position); 
+    Camera& setRotation(const float yaw, const float pitch);                                    // in degrees
 
     const glm::vec3 getPosition() const;
     const glm::vec3 getNormalizedDirection() const;

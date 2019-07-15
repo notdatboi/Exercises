@@ -36,13 +36,12 @@ private:
     void loadDescriptorSets();
     void createDescriptorBuffers();
     void loadAndWriteDonutTexture();
-    //void updateDescriptorSets();
+    void createDepthMaps();
     void loadShaders();
     //void createDepthPrepass();
     void createGBufferPass();
     void createRenderPass();        // and subpass dependency (l8r)
     void createGPassPipeline();
-    //void createFramebuffers();
     void loadDonutMesh(const std::string donutFilename);
     void recordRenderPass();
 
@@ -78,6 +77,7 @@ private:
 
     const uint32_t gBufferPassID = 0;
     vk::Format swapchainImageFormat = vk::Format::eR8G8B8A8Snorm;
+    vk::Format depthMapFormat;
     
     GLFWwindow* window;
     vk::SurfaceKHR surface;
@@ -88,14 +88,13 @@ private:
     spk::ShaderSet gPassShaders;
     vk::PipelineLayout gPassPipelineLayout;
     spk::Pipeline gPassPipeline;
-    //std::vector<spk::Image> depthMaps;
+    std::vector<spk::Image> depthMaps;
+    std::vector<spk::ImageView> depthMapImageViews;
     //spk::Subpass depthPrepass;
     spk::Subpass gBufferPass;
     //vk::SubpassDependency depthToGBufferDependency;
     spk::RenderPass renderPass;
-    spk::Image donutTexture;
     vk::Sampler donutSampler;
-    spk::ImageView donutTextureView;
     Mesh donut;
 
     vk::Semaphore imageAcquiredSemaphore;
