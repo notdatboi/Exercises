@@ -3,11 +3,11 @@
 void Mesh::create(const std::vector<Vertex>& vertices, 
     const std::vector<uint32_t>& indices, 
     const std::vector<vk::DescriptorSet>& descriptorSets,
-    const spk::Pipeline* pipeline)
+    const std::vector<const spk::Pipeline*> pipelines)
 {
     const auto& logicalDevice = spk::system::System::getInstance()->getLogicalDevice();
 
-    this->pipeline = pipeline;
+    this->pipelines = pipelines;
     this->descriptorSets = descriptorSets;
 
     vk::FenceCreateInfo fenceInfo;
@@ -85,16 +85,16 @@ const Mesh& Mesh::bindIndexBuffer(spk::Subpass& subpass) const
     return *this;
 }
 
-const Mesh& Mesh::bindPipeline(spk::Subpass& subpass) const
+const Mesh& Mesh::bindPipeline(spk::Subpass& subpass, const uint32_t index) const
 {
-    subpass.bindPipeline(pipeline->getPipeline());
+    subpass.bindPipeline(pipelines[index]->getPipeline());
 
     return *this;
 }
 
-const Mesh& Mesh::bindDescriptorSets(spk::Subpass& subpass, const uint32_t firstSetToUpdate) const
+const Mesh& Mesh::bindDescriptorSets(spk::Subpass& subpass, const uint32_t pipelineIndex, const uint32_t firstSetToUpdate) const
 {
-    subpass.bindDescriptorSets(pipeline->getLayout(), descriptorSets, firstSetToUpdate);
+    subpass.bindDescriptorSets(pipelines[pipelineIndex]->getLayout(), descriptorSets, firstSetToUpdate);
 
     return *this;
 }

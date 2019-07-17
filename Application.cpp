@@ -450,7 +450,7 @@ void Application::loadDonutMesh(const std::string donutFilename)
     std::vector<Vertex> donutVertices = getMeshVertexData(*(scene->mMeshes + 1));
     std::vector<uint32_t> donutIndices = getMeshIndexData(*(scene->mMeshes + 1));
     std::vector<vk::DescriptorSet> descriptorSets = descriptorPool.getDescriptorSets({mvpSetIndex, cameraSetIndex, donutInstancesSetIndex, textureSetIndex});
-    donut.create(donutVertices, donutIndices, descriptorSets, &gPassPipeline);
+    donut.create(donutVertices, donutIndices, descriptorSets, {&gPassPipeline});
 }
 
 
@@ -462,8 +462,8 @@ void Application::recordRenderPass()
         const auto& framebuffer = renderPass.getFramebuffer(currentFramebufferIndex);
         gBufferPass.bindCommandBuffer(currentFramebufferIndex);
         gBufferPass.beginRecording(renderPass.getRenderPass(), framebuffer);
-        donut.bindDescriptorSets(gBufferPass)
-            .bindPipeline(gBufferPass)
+        donut.bindDescriptorSets(gBufferPass, 0)
+            .bindPipeline(gBufferPass, 0)
             .bindIndexBuffer(gBufferPass)
             .bindVertexBuffer(gBufferPass)
             .drawIndexed(gBufferPass, 2);
