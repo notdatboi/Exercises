@@ -104,5 +104,5 @@ void main(void)
 
     outColor = (diffuseLight + ambientLight + specularLight) * attenuation + directionalLight + flashlightLight;
     //outColor.w = 1;
-    //outColor = vec4(1, 1, 1, 0.5);
+    //outColor = vec4(1, 1, 1, 1) * gl_FragCoord.z;
 }
