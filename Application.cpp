@@ -135,7 +135,14 @@ void Application::loadDescriptorSets()
         .setDescriptorCount(1);
     descriptorPool.create(4, poolSizes, vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet);
 
-    std::vector<vk::DescriptorSetLayoutBinding> uniformVertexB0C1(1);   // uniform buffer, vertex stage, binding = 0, count = 1; usage: mvp, Instances
+    std::vector<vk::DescriptorSetLayoutBinding> uniformTeseB0C1(1);   // uniform buffer, tessellation evaluation stage, binding = 0, count = 1; usage: mvp
+    uniformTeseB0C1[0].setBinding(0)
+        .setDescriptorCount(1)
+        .setDescriptorType(vk::DescriptorType::eUniformBuffer)
+        .setPImmutableSamplers(nullptr)
+        .setStageFlags(vk::ShaderStageFlagBits::eTessellationEvaluation);
+
+    std::vector<vk::DescriptorSetLayoutBinding> uniformVertexB0C1(1);   // uniform buffer, vertex stage, binding = 0, count = 1; usage: Instances
     uniformVertexB0C1[0].setBinding(0)
         .setDescriptorCount(1)
         .setDescriptorType(vk::DescriptorType::eUniformBuffer)
@@ -156,11 +163,12 @@ void Application::loadDescriptorSets()
         .setPImmutableSamplers(nullptr)
         .setStageFlags(vk::ShaderStageFlagBits::eFragment);
 
-    descriptorPool.addDescriptorSetLayout(uniformVertexB0C1)
+    descriptorPool.addDescriptorSetLayout(uniformTeseB0C1)
+        .addDescriptorSetLayout(uniformVertexB0C1)
         .addDescriptorSetLayout(combinedImageSamplerFragmentB0C1)
         .addDescriptorSetLayout(uniformFragmentB0C1);
 
-    std::vector<uint32_t> layoutIndices = {0, 2, 0, 1};
+    std::vector<uint32_t> layoutIndices = {0, 3, 1, 2};
 
     descriptorPool.allocateDescriptorSets(layoutIndices);
 }
@@ -243,11 +251,15 @@ void Application::createDepthMaps()
 
 void Application::loadShaders()
 {
-    std::vector<spk::ShaderInfo> shaderInfos(2);
+    std::vector<spk::ShaderInfo> shaderInfos(4);
     shaderInfos[0].filename = "vert.spv";
     shaderInfos[0].type = vk::ShaderStageFlagBits::eVertex;
-    shaderInfos[1].filename = "frag.spv";
-    shaderInfos[1].type = vk::ShaderStageFlagBits::eFragment;
+    shaderInfos[1].filename = "tesc.spv";
+    shaderInfos[1].type = vk::ShaderStageFlagBits::eTessellationControl;
+    shaderInfos[2].filename = "tese.spv";
+    shaderInfos[2].type = vk::ShaderStageFlagBits::eTessellationEvaluation;
+    shaderInfos[3].filename = "frag.spv";
+    shaderInfos[3].type = vk::ShaderStageFlagBits::eFragment;
     gPassShaders.create(shaderInfos);
 }
 
@@ -339,7 +351,7 @@ void Application::createGPassPipeline()
 
     spk::InputAssemblyState assemblyState;
     assemblyState.enablePrimitiveRestart = false;
-    assemblyState.topology = vk::PrimitiveTopology::eTriangleList;
+    assemblyState.topology = vk::PrimitiveTopology::ePatchList;
 
     vk::Rect2D scissor;
     scissor.setOffset({0, 0})
@@ -352,6 +364,9 @@ void Application::createGPassPipeline()
         .setHeight(windowHeight)
         .setMinDepth(0.0f)
         .setMaxDepth(1.0f);
+
+    spk::TessellationState tessellationState;
+    tessellationState.patchControlPointCount = 4;
 
     spk::ViewportState viewportState;
     viewportState.scissor = scissor;
@@ -378,7 +393,7 @@ void Application::createGPassPipeline()
 
     spk::DynamicState dynamicState;
 
-    gPassPipelineLayout = descriptorPool.getPipelineLayout({0, 2, 0, 1});
+    gPassPipelineLayout = descriptorPool.getPipelineLayout({0, 3, 1, 2});
 
     spk::AdditionalInfo additionalInfo;
     additionalInfo.layout = gPassPipelineLayout;
@@ -388,6 +403,7 @@ void Application::createGPassPipeline()
     gPassPipeline.create(shaderStages, 
         vertexInputState,
         assemblyState,
+        tessellationState,
         viewportState,
         rasterizationState,
         multisampleState,

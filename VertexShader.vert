@@ -1,12 +1,6 @@
 #version 460 core
 #extension GL_ARB_separate_shader_objects : enable
-
-layout(set = 0, binding = 0) uniform MVP
-{
-    mat4 model;
-    mat4 view;
-    mat4 proj;
-} mvp;
+#extension GL_EXT_tessellation_shader : enable
 
 layout(set = 2, binding = 0) uniform Instances
 {
@@ -21,19 +15,19 @@ layout(location = 2) in vec2 uv;
 layout(location = 1) out vec2 uvOut;
 layout(location = 2) out vec3 normalOut;*/
 
-layout(location = 0) out InterpolatedVertexData
+layout(location = 0) out VertexData
 {
     vec3 coords;
     vec3 normal;
     vec2 uv;
-} interpolated;
+} vertexData;
 
 void main(void)
 {
     vec3 instancePos = pos + instances.data[gl_InstanceIndex];
-    gl_Position = mvp.proj * mvp.view * mvp.model * vec4(instancePos, 1.0);
+    gl_Position = vec4(instancePos, 1.0);
 
-    interpolated.coords = instancePos;
-    interpolated.normal = normal;
-    interpolated.uv = vec2(uv.x, 1 - uv.y);
+    vertexData.coords = instancePos;
+    vertexData.normal = normal;
+    vertexData.uv = vec2(uv.x, 1 - uv.y);
 }

@@ -1,15 +1,16 @@
 #version 460 core
 #extension GL_ARB_separate_shader_objects : enable
+#extension GL_EXT_tessellation_shader : enable
 /*layout(location = 0) in vec3 fragCoords;
 layout(location = 1) in vec2 uv;
 layout(location = 2) in vec3 normal;*/
 
-layout(location = 0) in InterpolatedVertexData
+layout(location = 0) in VertexData
 {
     vec3 coords;
     vec3 normal;
     vec2 uv;
-} interpolated;
+} vertexData;
 
 layout(set = 1, binding = 0) uniform Camera
 {
@@ -77,14 +78,14 @@ void main(void)
     light.attenuationLinear = 0.09f;
     light.attenuationQuadratic = 0.032f;
 
-    vec3 norm = normalize(interpolated.normal);
-    vec3 fragToLight = normalize(light.emitterPosition - interpolated.coords);
-    vec3 fragToCamera = normalize(camera.pos - interpolated.coords);
+    vec3 norm = normalize(vertexData.normal);
+    vec3 fragToLight = normalize(light.emitterPosition - vertexData.coords);
+    vec3 fragToCamera = normalize(camera.pos - vertexData.coords);
 
-    float dist = distance(light.emitterPosition, interpolated.coords);
+    float dist = distance(light.emitterPosition, vertexData.coords);
     float attenuation = 1.0 / (light.attenuationConstant + light.attenuationLinear * dist + light.attenuationQuadratic * dist * dist);
 
-    vec4 textureColor = texture(txt, interpolated.uv);
+    vec4 textureColor = texture(txt, vertexData.uv);
     vec4 ambientLight = vec4(0.1, 0.1, 0.1, 1) * textureColor;
     vec4 diffuseLight = calculateDiffuse(textureColor, norm, fragToLight, light.power);
     vec4 specularLight = calculateSpecular(textureColor, norm, fragToLight, fragToCamera, 32, light.power);
@@ -97,7 +98,7 @@ void main(void)
     {
         vec4 flashlightDiffuse = calculateDiffuse(textureColor, norm, fragToCamera, 0.2);
         vec4 flashlightSpecular = calculateSpecular(textureColor, norm, fragToCamera, fragToCamera, 32, 0.2);
-        float distToFlashlight = distance(interpolated.coords, camera.pos);
+        float distToFlashlight = distance(vertexData.coords, camera.pos);
         float flashlightAttenuation = 1.0 / (light.attenuationConstant + light.attenuationLinear * distToFlashlight + light.attenuationQuadratic * distToFlashlight * distToFlashlight);
         flashlightLight = (flashlightDiffuse + flashlightSpecular) * flashlightAttenuation * flashlightIntensity;
     }
@@ -105,4 +106,5 @@ void main(void)
     outColor = (diffuseLight + ambientLight + specularLight) * attenuation + directionalLight + flashlightLight;
     //outColor.w = 1;
     //outColor = vec4(1, 1, 1, 1) * gl_FragCoord.z;
+    //outColor = vec4(1, 1, 1, 1);
 }
