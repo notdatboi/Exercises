@@ -21,7 +21,7 @@ Application::Application()
     createRenderPass();
     createGPassPipeline();
 //    createFramebuffers();
-    loadDonutMesh("DonutWithStoneTexture.obj");
+    loadDonutMesh("DonutWithStoneTextureLowRes.obj");
     recordRenderPass();
 
     camera.setPosition({2, 2, 0});
