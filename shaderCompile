@@ -1,2 +1,4 @@
 glslangValidator -V VertexShader.vert
 glslangValidator -V FragmentShader.frag
+glslangValidator -V TesselationControlShader.tesc
+glslangValidator -V TesselationEvaluationShader.tese
