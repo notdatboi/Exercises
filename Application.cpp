@@ -21,7 +21,7 @@ Application::Application()
     createRenderPass();
     createGPassPipeline();
 //    createFramebuffers();
-    loadDonutMesh("DonutWithStoneTextureLowRes.obj");
+    loadDonutMesh("DonutWithStoneTextureNotTriangulated.obj");
     recordRenderPass();
 
     camera.setPosition({2, 2, 0});
@@ -440,13 +440,13 @@ const std::vector<Vertex> Application::getMeshVertexData(const aiMesh* mesh) con
 void Application::getMeshIndexData(const aiMesh* mesh, std::vector<uint32_t>& indices) const
 {
     const auto faceCount = mesh->mNumFaces;
-    indices.resize(faceCount * 3);
+    indices.resize(faceCount * 4);
     for(auto currentFaceIndex = 0; currentFaceIndex < faceCount; ++currentFaceIndex)
     {
         const auto& face = *(mesh->mFaces + currentFaceIndex);
         for(auto faceIndexIndex = 0; faceIndexIndex < face.mNumIndices; ++faceIndexIndex)
         {
-            indices[currentFaceIndex * 3 + faceIndexIndex] = *(face.mIndices + faceIndexIndex);
+            indices[currentFaceIndex * 4 + faceIndexIndex] = *(face.mIndices + faceIndexIndex);
         }
     }
 }
