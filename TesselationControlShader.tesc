@@ -22,13 +22,12 @@ void main()
 {
     if(gl_InvocationID == 0)
     {
-        gl_TessLevelInner[0] = 1.0f;
-        gl_TessLevelInner[1] = 1.0f;
-
-        gl_TessLevelOuter[0] = 1.0f;
-        gl_TessLevelOuter[1] = 1.0f;
-        gl_TessLevelOuter[2] = 1.0f;
-        gl_TessLevelOuter[3] = 1.0f;
+        gl_TessLevelInner[0] = 64.0f;
+        gl_TessLevelInner[1] = 64.0f;
+        gl_TessLevelOuter[0] = 64.0f;
+        gl_TessLevelOuter[1] = 64.0f;
+        gl_TessLevelOuter[2] = 64.0f;
+        gl_TessLevelOuter[3] = 64.0f;
     }
     vertexDataOut[gl_InvocationID].coords = vertexData[gl_InvocationID].coords;
     vertexDataOut[gl_InvocationID].normal = vertexData[gl_InvocationID].normal;
