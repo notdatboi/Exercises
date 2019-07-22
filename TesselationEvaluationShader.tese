@@ -2,13 +2,6 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_EXT_tessellation_shader : enable
 
-layout(set = 0, binding = 0) uniform MVP
-{
-    mat4 model;
-    mat4 view;
-    mat4 proj;
-} mvp;
-
 layout(quads, fractional_odd_spacing, cw) in;
 
 layout(location = 0) in VertexData
@@ -47,7 +40,7 @@ void main()
     vec2 uvMid2 = mix(vertexData[3].uv, vertexData[2].uv, gl_TessCoord.x);
     vec2 uv = mix(uvMid1, uvMid2, gl_TessCoord.y);
 
-    gl_Position = mvp.proj * mvp.view * mvp.model * pos;
+    gl_Position =  pos;
     vertexDataOut.coords = pos.xyz;
     vertexDataOut.normal = normalize(norm);
     vertexDataOut.uv = uv;
