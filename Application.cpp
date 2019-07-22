@@ -3,7 +3,7 @@
 Application::Application()
 {
     mvp.model = glm::mat4(1);
-    mvp.proj = glm::perspective(glm::radians<float>(60), windowWidth / (float)windowHeight, 0.1f, 10.f);
+    mvp.proj = glm::perspective(glm::radians<float>(60), windowWidth / (float)windowHeight, 0.0001f, 10.f);
     mvp.proj[1][1] = -mvp.proj[1][1];
 
     createSyncObjects();
@@ -135,12 +135,12 @@ void Application::loadDescriptorSets()
         .setDescriptorCount(1);
     descriptorPool.create(4, poolSizes, vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet);
 
-    std::vector<vk::DescriptorSetLayoutBinding> uniformTeseB0C1(1);   // uniform buffer, tessellation evaluation stage, binding = 0, count = 1; usage: mvp
-    uniformTeseB0C1[0].setBinding(0)
+    std::vector<vk::DescriptorSetLayoutBinding> uniformGeomB0C1(1);   // uniform buffer, geometry shader stage, binding = 0, count = 1; usage: mvp
+    uniformGeomB0C1[0].setBinding(0)
         .setDescriptorCount(1)
         .setDescriptorType(vk::DescriptorType::eUniformBuffer)
         .setPImmutableSamplers(nullptr)
-        .setStageFlags(vk::ShaderStageFlagBits::eTessellationEvaluation);
+        .setStageFlags(vk::ShaderStageFlagBits::eGeometry);
 
     std::vector<vk::DescriptorSetLayoutBinding> uniformVertexB0C1(1);   // uniform buffer, vertex stage, binding = 0, count = 1; usage: Instances
     uniformVertexB0C1[0].setBinding(0)
@@ -163,7 +163,7 @@ void Application::loadDescriptorSets()
         .setPImmutableSamplers(nullptr)
         .setStageFlags(vk::ShaderStageFlagBits::eFragment);
 
-    descriptorPool.addDescriptorSetLayout(uniformTeseB0C1)
+    descriptorPool.addDescriptorSetLayout(uniformGeomB0C1)
         .addDescriptorSetLayout(uniformVertexB0C1)
         .addDescriptorSetLayout(combinedImageSamplerFragmentB0C1)
         .addDescriptorSetLayout(uniformFragmentB0C1);
@@ -251,7 +251,7 @@ void Application::createDepthMaps()
 
 void Application::loadShaders()
 {
-    std::vector<spk::ShaderInfo> shaderInfos(4);
+    std::vector<spk::ShaderInfo> shaderInfos(5);
     shaderInfos[0].filename = "vert.spv";
     shaderInfos[0].type = vk::ShaderStageFlagBits::eVertex;
     shaderInfos[1].filename = "tesc.spv";
@@ -260,6 +260,8 @@ void Application::loadShaders()
     shaderInfos[2].type = vk::ShaderStageFlagBits::eTessellationEvaluation;
     shaderInfos[3].filename = "frag.spv";
     shaderInfos[3].type = vk::ShaderStageFlagBits::eFragment;
+    shaderInfos[4].filename = "geom.spv";
+    shaderInfos[4].type = vk::ShaderStageFlagBits::eGeometry;
     gPassShaders.create(shaderInfos);
 }
 
