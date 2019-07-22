@@ -516,6 +516,7 @@ void Application::processInput(const float elapsedTime)
     int AState = glfwGetKey(window, GLFW_KEY_A);
     int SState = glfwGetKey(window, GLFW_KEY_S);
     int DState = glfwGetKey(window, GLFW_KEY_D);
+    int EscState = glfwGetKey(window, GLFW_KEY_ESCAPE);
     glm::vec3 cameraShift({0, 0, 0});
     if(WState == GLFW_PRESS)
     {
@@ -532,6 +533,10 @@ void Application::processInput(const float elapsedTime)
     if(DState == GLFW_PRESS)
     {
         cameraShift -= glm::normalize(glm::cross(up, direction)) * elapsedTime;
+    }
+    if(EscState == GLFW_PRESS)
+    {
+        glfwSetWindowShouldClose(window, GLFW_TRUE);
     }
     camera.move(cameraShift.x, cameraShift.y, cameraShift.z);
     mvp.view = glm::lookAt(camera.getPosition(), camera.getPosition() + camera.getNormalizedDirection(), up);
