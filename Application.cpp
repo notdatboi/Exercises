@@ -181,9 +181,9 @@ void Application::loadAndWriteDonutTexture()
     vk::DescriptorImageInfo imageInfo;
 
     vk::SamplerCreateInfo samplerInfo;
-    samplerInfo.setMagFilter(vk::Filter::eNearest)
-        .setMinFilter(vk::Filter::eNearest)
-        .setMipmapMode(vk::SamplerMipmapMode::eNearest)
+    samplerInfo.setMagFilter(vk::Filter::eLinear)
+        .setMinFilter(vk::Filter::eLinear)
+        .setMipmapMode(vk::SamplerMipmapMode::eLinear)
         .setAddressModeU(vk::SamplerAddressMode::eClampToBorder)
         .setAddressModeV(vk::SamplerAddressMode::eClampToBorder)
         .setAddressModeW(vk::SamplerAddressMode::eClampToBorder)
@@ -193,7 +193,7 @@ void Application::loadAndWriteDonutTexture()
         .setCompareEnable(false)
         //.setCompareOp()
         .setMinLod(0.0f)
-        .setMaxLod(1.0f)
+        .setMaxLod(10.0f)
         .setBorderColor(vk::BorderColor::eFloatOpaqueBlack)
         .setUnnormalizedCoordinates(false);
     if(logicalDevice.createSampler(&samplerInfo, nullptr, &donutSampler) != vk::Result::eSuccess) throw std::runtime_error("Failed to create sampler!\n");

@@ -36,7 +36,7 @@ TextureHolder& TextureHolder::addTexture(const vk::Format format,
     temporaryStorage.bindMemory();
     temporaryStorage.updateCPUAccessible(reinterpret_cast<const void*>(imageData));
 
-    textures[name].image.create({static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1}, format, vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst, vk::ImageAspectFlagBits::eColor);
+    textures[name].image.create({static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1}, format, vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc, vk::ImageAspectFlagBits::eColor, static_cast<uint32_t>(std::floor(std::log2(std::max(width, height))) + 1));
     textures[name].image.bindMemory();
     textures[name].image.changeLayout(textures[name].layoutChangeCommandBuffer, 
         vk::ImageLayout::eTransferDstOptimal, 
@@ -54,8 +54,8 @@ TextureHolder& TextureHolder::addTexture(const vk::Format format,
         vk::PipelineStageFlagBits::eTopOfPipe, 
         true);
     if(textures[name].layoutChangeCommandBuffer.reset(vk::CommandBufferResetFlags()) != vk::Result::eSuccess) throw std::runtime_error("Failed to reset command buffer!\n");
-    textures[name].image.changeLayout(textures[name].layoutChangeCommandBuffer, 
-        vk::ImageLayout::eShaderReadOnlyOptimal,
+    textures[name].image.generateMipmap(textures[name].layoutChangeCommandBuffer, 
+        vk::Filter::eLinear,
         textures[name].imageUpdatedSemaphore,
         textures[name].layoutChangedSemaphore,
         textures[name].imageUpdatedFence,
