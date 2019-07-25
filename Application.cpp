@@ -22,6 +22,7 @@ Application::Application()
     createGPassPipeline();
 //    createFramebuffers();
     loadDonutMesh("DonutWithStoneTextureNotTriangulated.obj");
+    createQueryPool();
     recordRenderPass();
 
     camera.setPosition({2, 2, 0});
@@ -86,6 +87,9 @@ void Application::run()
             //std::cout << "Camera: "
             //    << camera.getPosition().x << ' ' << camera.getPosition().y << ' ' << camera.getPosition().z << '\n'
             //    << camera.getNormalizedDirection().x << ' ' << camera.getNormalizedDirection().y << ' ' << camera.getNormalizedDirection().z << '\n';
+            uint32_t queryResult;
+            if(logicalDevice.getQueryPoolResults(queryPool, nextImageIndex, 1, 4, reinterpret_cast<void*>(&queryResult), 4, vk::QueryResultFlagBits::eWait) != vk::Result::eSuccess) spk::system::yeet("Failed to fetch query pool results!\n");
+            std::cout << queryResult << '\n';
         }
     }
 }
@@ -471,6 +475,17 @@ void Application::loadDonutMesh(const std::string donutFilename)
     donut.create(donutVertices, donutIndices, descriptorSets, {&gPassPipeline});
 }
 
+void Application::createQueryPool()
+{
+    const auto& logicalDevice = spk::system::System::getInstance()->getLogicalDevice();
+
+    vk::QueryPoolCreateInfo info;
+    info.setQueryType(vk::QueryType::ePipelineStatistics)
+        .setQueryCount(renderPass.getFramebufferCount())
+        .setPipelineStatistics(vk::QueryPipelineStatisticFlagBits::eFragmentShaderInvocations);
+    
+    if(logicalDevice.createQueryPool(&info, nullptr, &queryPool) != vk::Result::eSuccess) throw std::runtime_error("Failed to create query pool!\n");
+}
 
 void Application::recordRenderPass()
 {
@@ -478,8 +493,8 @@ void Application::recordRenderPass()
     for(auto currentFramebufferIndex = 0; currentFramebufferIndex < framebufferCount; ++currentFramebufferIndex)
     {
         const auto& framebuffer = renderPass.getFramebuffer(currentFramebufferIndex);
-        gBufferPass.bindCommandBuffer(currentFramebufferIndex);
-        gBufferPass.beginRecording(renderPass.getRenderPass(), framebuffer);
+        gBufferPass.bindCommandBuffer(currentFramebufferIndex)
+            .beginRecording(renderPass.getRenderPass(), framebuffer);
         donut.bindDescriptorSets(gBufferPass, 0)
             .bindPipeline(gBufferPass, 0)
             .bindIndexBuffer(gBufferPass)
@@ -492,9 +507,14 @@ void Application::recordRenderPass()
         std::vector<vk::ClearValue> clearVals(2);
         clearVals[0].setColor(vk::ClearColorValue());
         clearVals[1].setDepthStencil(vk::ClearDepthStencilValue(1.0f));
-        renderPass.beginRecording(currentFramebufferIndex, clearVals, renderArea)
+        renderPass.beginRecording(currentFramebufferIndex)
+            .resetQueries(queryPool, currentFramebufferIndex, 1)
+            .beginQuery(queryPool, currentFramebufferIndex, vk::QueryControlFlags())
+            .beginPass(clearVals, renderArea)
             //.nextSubpass(gBufferPass.getSecondaryCommandBuffer(currentFramebufferIndex))
             .executeCommandBuffer(gBufferPass.getSecondaryCommandBuffer(currentFramebufferIndex))
+            .endPass()
+            .endQuery(queryPool, currentFramebufferIndex)
             .endRecording();
     }
 }
@@ -638,6 +658,11 @@ void Application::destroy()
     {
         logicalDevice.destroySemaphore(imageRenderedSemaphore, nullptr);
         imageRenderedSemaphore = vk::Semaphore();
+    }
+    if(queryPool)
+    {
+        logicalDevice.destroyQueryPool(queryPool, nullptr);
+        queryPool = vk::QueryPool();
     }
 }
 

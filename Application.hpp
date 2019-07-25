@@ -43,6 +43,7 @@ private:
     void createRenderPass();        // and subpass dependency (l8r)
     void createGPassPipeline();
     void loadDonutMesh(const std::string donutFilename);
+    void createQueryPool();
     void recordRenderPass();
 
     void getMeshVertexData(const aiMesh* mesh, std::vector<Vertex>& vertices) const;
@@ -95,6 +96,7 @@ private:
     //vk::SubpassDependency depthToGBufferDependency;
     spk::RenderPass renderPass;
     vk::Sampler donutSampler;
+    vk::QueryPool queryPool;
     Mesh donut;
 
     vk::Semaphore imageAcquiredSemaphore;
