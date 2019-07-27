@@ -16,11 +16,8 @@ Application::Application()
     updateCameraDescriptorSet();
     loadAndWriteDonutTexture();
     createDepthMaps();
-    loadShaders();
     createGBufferPass();
     createRenderPass();
-    createGPassPipeline();
-//    createFramebuffers();
     loadDonutMesh("DonutWithStoneTextureNotTriangulated.obj");
     createQueryPool();
     recordRenderPass();
@@ -253,22 +250,6 @@ void Application::createDepthMaps()
     }
 }
 
-void Application::loadShaders()
-{
-    std::vector<spk::ShaderInfo> shaderInfos(5);
-    shaderInfos[0].filename = "vert.spv";
-    shaderInfos[0].type = vk::ShaderStageFlagBits::eVertex;
-    shaderInfos[1].filename = "tesc.spv";
-    shaderInfos[1].type = vk::ShaderStageFlagBits::eTessellationControl;
-    shaderInfos[2].filename = "tese.spv";
-    shaderInfos[2].type = vk::ShaderStageFlagBits::eTessellationEvaluation;
-    shaderInfos[3].filename = "frag.spv";
-    shaderInfos[3].type = vk::ShaderStageFlagBits::eFragment;
-    shaderInfos[4].filename = "geom.spv";
-    shaderInfos[4].type = vk::ShaderStageFlagBits::eGeometry;
-    gPassShaders.create(shaderInfos);
-}
-
 void Application::createGBufferPass()
 {
     std::vector<vk::AttachmentReference> colorAttachmentReferences(1);
@@ -323,100 +304,6 @@ void Application::createRenderPass()        // and subpass dependency (l8r)
         renderPass.addFramebuffer(framebufferAttachments, {windowWidth, windowHeight});
         ++index;
     }
-
-    // continue later
-}
-
-void Application::createGPassPipeline()
-{
-    spk::ShaderStages shaderStages;
-    shaderStages.stages = gPassShaders.getShaderStages();
-
-    vk::VertexInputBindingDescription bindingDesc;
-    bindingDesc.setBinding(0)
-        .setInputRate(vk::VertexInputRate::eVertex)
-        .setStride(sizeof(Vertex));
-
-    vk::VertexInputAttributeDescription positionAttribute, normalAttribute, uvAttribute;
-    positionAttribute.setBinding(0)
-        .setFormat(vk::Format::eR32G32B32Sfloat)
-        .setLocation(0)
-        .setOffset(offsetof(Vertex, position));
-    normalAttribute.setBinding(0)
-        .setFormat(vk::Format::eR32G32B32Sfloat)
-        .setLocation(1)
-        .setOffset(offsetof(Vertex, normal));
-    uvAttribute.setBinding(0)
-        .setFormat(vk::Format::eR32G32Sfloat)
-        .setLocation(2)
-        .setOffset(offsetof(Vertex, uv));
-
-    spk::VertexInputState vertexInputState;
-    vertexInputState.bindingDescriptions = {bindingDesc};
-    vertexInputState.attributeDescriptions = {positionAttribute, normalAttribute, uvAttribute};
-
-    spk::InputAssemblyState assemblyState;
-    assemblyState.enablePrimitiveRestart = false;
-    assemblyState.topology = vk::PrimitiveTopology::ePatchList;
-
-    vk::Rect2D scissor;
-    scissor.setOffset({0, 0})
-        .setExtent({windowWidth, windowHeight});
-
-    vk::Viewport viewport;
-    viewport.setX(0)
-        .setY(0)
-        .setWidth(windowWidth)
-        .setHeight(windowHeight)
-        .setMinDepth(0.0f)
-        .setMaxDepth(1.0f);
-
-    spk::TessellationState tessellationState;
-    tessellationState.patchControlPointCount = 4;
-
-    spk::ViewportState viewportState;
-    viewportState.scissor = scissor;
-    viewportState.viewport = viewport;
-
-    spk::RasterizationState rasterizationState;
-    rasterizationState.cullMode = vk::CullModeFlagBits::eBack;
-    rasterizationState.enableDepthClamp = false;
-    rasterizationState.frontFace = vk::FrontFace::eCounterClockwise;
-
-    spk::MultisampleState multisampleState;
-    multisampleState.rasterizationSampleCount = vk::SampleCountFlagBits::e1;
-
-    spk::DepthStencilState depthStencilState;
-    depthStencilState.enableDepthTest = true;
-    depthStencilState.depthCompareOp = vk::CompareOp::eLess;
-    depthStencilState.writeTestResults = true;
-
-    vk::PipelineColorBlendAttachmentState colorBlendAttachmentState;
-    colorBlendAttachmentState.setBlendEnable(false)
-        .setColorWriteMask(vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA);
-    spk::ColorBlendState colorBlendState;
-    colorBlendState.attachmentStates = {colorBlendAttachmentState};
-
-    spk::DynamicState dynamicState;
-
-    gPassPipelineLayout = descriptorPool.getPipelineLayout({0, 3, 1, 2});
-
-    spk::AdditionalInfo additionalInfo;
-    additionalInfo.layout = gPassPipelineLayout;
-    additionalInfo.renderPass = renderPass.getRenderPass();
-    additionalInfo.subpassIndex = gBufferPassID;
-
-    gPassPipeline.create(shaderStages, 
-        vertexInputState,
-        assemblyState,
-        tessellationState,
-        viewportState,
-        rasterizationState,
-        multisampleState,
-        depthStencilState,
-        colorBlendState,
-        dynamicState,
-        additionalInfo);
 }
 
 void Application::getMeshVertexData(const aiMesh* mesh, std::vector<Vertex>& vertices) const
@@ -472,7 +359,28 @@ void Application::loadDonutMesh(const std::string donutFilename)
     std::vector<Vertex> donutVertices = getMeshVertexData(*(scene->mMeshes + 1));
     std::vector<uint32_t> donutIndices = getMeshIndexData(*(scene->mMeshes + 1));
     std::vector<vk::DescriptorSet> descriptorSets = descriptorPool.getDescriptorSets({mvpSetIndex, cameraSetIndex, donutInstancesSetIndex, textureSetIndex});
-    donut.create(donutVertices, donutIndices, descriptorSets, {&gPassPipeline});
+    donut.create(donutVertices, donutIndices, descriptorSets);
+
+    std::vector<spk::ShaderInfo> shaderInfos(5);
+    shaderInfos[0].filename = "vert.spv";
+    shaderInfos[0].type = vk::ShaderStageFlagBits::eVertex;
+    shaderInfos[1].filename = "tesc.spv";
+    shaderInfos[1].type = vk::ShaderStageFlagBits::eTessellationControl;
+    shaderInfos[2].filename = "tese.spv";
+    shaderInfos[2].type = vk::ShaderStageFlagBits::eTessellationEvaluation;
+    shaderInfos[3].filename = "frag.spv";
+    shaderInfos[3].type = vk::ShaderStageFlagBits::eFragment;
+    shaderInfos[4].filename = "geom.spv";
+    shaderInfos[4].type = vk::ShaderStageFlagBits::eGeometry;
+
+    gPassPipelineLayout = descriptorPool.getPipelineLayout({0, 3, 1, 2});
+
+    spk::AdditionalInfo additionalInfo;
+    additionalInfo.layout = gPassPipelineLayout;
+    additionalInfo.renderPass = renderPass.getRenderPass();
+    additionalInfo.subpassIndex = gBufferPassID;
+
+    donut.createPipeline(0, shaderInfos, {windowWidth, windowHeight}, additionalInfo);
 }
 
 void Application::createQueryPool()

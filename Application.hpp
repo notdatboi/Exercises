@@ -1,7 +1,7 @@
 #ifndef APPLICATION_HPP
 #define APPLICATION_HPP
 
-#include"Mesh.hpp"
+#include"BasicMesh.hpp"
 //#include<map>
 #include<string>
 #define GLFW_INCLUDE_VULKAN
@@ -37,11 +37,9 @@ private:
     void createDescriptorBuffers();
     void loadAndWriteDonutTexture();
     void createDepthMaps();
-    void loadShaders();
     //void createDepthPrepass();
     void createGBufferPass();
     void createRenderPass();        // and subpass dependency (l8r)
-    void createGPassPipeline();
     void loadDonutMesh(const std::string donutFilename);
     void createQueryPool();
     void recordRenderPass();
@@ -97,7 +95,7 @@ private:
     spk::RenderPass renderPass;
     vk::Sampler donutSampler;
     vk::QueryPool queryPool;
-    Mesh donut;
+    BasicMesh donut;
 
     vk::Semaphore imageAcquiredSemaphore;
     vk::Semaphore imageRenderedSemaphore;
