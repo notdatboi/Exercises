@@ -85,14 +85,14 @@ const Mesh& Mesh::bindIndexBuffer(spk::Subpass& subpass) const
 
 const Mesh& Mesh::bindPipeline(spk::Subpass& subpass, const uint32_t index) const
 {
-    subpass.bindPipeline(pipelines[index]->getPipeline());
+    subpass.bindPipeline(pipelines[index].getPipeline());
 
     return *this;
 }
 
 const Mesh& Mesh::bindDescriptorSets(spk::Subpass& subpass, const uint32_t pipelineIndex, const uint32_t firstSetToUpdate) const
 {
-    subpass.bindDescriptorSets(pipelines[pipelineIndex]->getLayout(), descriptorSets, firstSetToUpdate);
+    subpass.bindDescriptorSets(pipelines[pipelineIndex].getLayout(), descriptorSets, firstSetToUpdate);
 
     return *this;
 }
@@ -110,6 +110,18 @@ const Mesh& Mesh::drawIndexed(spk::Subpass& subpass, const uint32_t instanceCoun
     subpass.drawIndexed(indexCount, instanceCount, 0, firstInstance);
 
     return *this;
+}
+
+void Mesh::loadShaders(const uint32_t shaderSetIndex, const std::vector<spk::ShaderInfo> shaderInfos)
+{
+    if(shaderSets.size() <= shaderSetIndex)
+    {
+        for(auto index = shaderSets.size(); index <= shaderSetIndex; ++index)
+        {
+            shaderSets.push_back(spk::ShaderSet());
+        }
+    }
+    shaderSets[shaderSetIndex].create(shaderInfos);
 }
 
 void Mesh::destroy()
