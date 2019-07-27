@@ -2,12 +2,10 @@
 
 void Mesh::create(const std::vector<Vertex>& vertices, 
     const std::vector<uint32_t>& indices, 
-    const std::vector<vk::DescriptorSet>& descriptorSets,
-    const std::vector<const spk::Pipeline*> pipelines)
+    const std::vector<vk::DescriptorSet>& descriptorSets)
 {
     const auto& logicalDevice = spk::system::System::getInstance()->getLogicalDevice();
 
-    this->pipelines = pipelines;
     this->descriptorSets = descriptorSets;
 
     vk::FenceCreateInfo fenceInfo;

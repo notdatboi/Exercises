@@ -17,19 +17,19 @@ struct Vertex
     alignas(8) glm::vec2 uv;
 };
 
-class Mesh
+class Mesh                  // abstract mesh class
 {
 public:
     void create(const std::vector<Vertex>& vertices, 
         const std::vector<uint32_t>& indices, 
-        const std::vector<vk::DescriptorSet>& descriptorSets,
-        const std::vector<const spk::Pipeline*> pipelines);
+        const std::vector<vk::DescriptorSet>& descriptorSets);
     const Mesh& bindVertexBuffer(spk::Subpass& subpass) const;
     const Mesh& bindIndexBuffer(spk::Subpass& subpass) const;
     const Mesh& bindPipeline(spk::Subpass& subpass, const uint32_t index) const;
     const Mesh& bindDescriptorSets(spk::Subpass& subpass, const uint32_t pipelineIndex, const uint32_t firstSetToUpdate = 0) const;
     const Mesh& draw(spk::Subpass& subpass, const uint32_t instanceCount = 1, const uint32_t firstInstance = 0) const;
     const Mesh& drawIndexed(spk::Subpass& subpass, const uint32_t instanceCount = 1, const uint32_t firstInstance = 0) const;
+    virtual void createPipeline(const uint32_t pipelineIndex, const std::vector<std::string> shaderFilenames, const spk::AdditionalInfo& info) = 0;
 
     void destroy();
     ~Mesh();
