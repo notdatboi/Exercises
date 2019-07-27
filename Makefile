@@ -22,6 +22,9 @@ obj/Camera.o: Camera.cpp Camera.hpp
 obj/Mesh.o: Mesh.cpp Mesh.hpp
 	$(CC) -c $< -o $@ -g
 
+obj/BasicMesh.o: BasicMesh.cpp BasicMesh.hpp Mesh.hpp
+	$(CC) -c $< -o $@ -g
+
 obj/Application.o: Application.cpp \
 	Application.hpp \
 	Mesh.hpp \
