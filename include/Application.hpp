@@ -2,6 +2,7 @@
 #define APPLICATION_HPP
 
 #include"BasicMesh.hpp"
+#include"NotTexturedMesh.hpp"
 //#include<map>
 #include<string>
 #define GLFW_INCLUDE_VULKAN
@@ -40,7 +41,7 @@ private:
     //void createDepthPrepass();
     void createGBufferPass();
     void createRenderPass();        // and subpass dependency (l8r)
-    void loadDonutMesh(const std::string donutFilename);
+    void loadMeshes(const std::string filename);
     void createQueryPool();
     void recordRenderPass();
 
@@ -86,6 +87,7 @@ private:
     //spk::ShaderSet depthPrepassShaders;
     spk::ShaderSet gPassShaders;
     vk::PipelineLayout gPassPipelineLayout;
+    vk::PipelineLayout icingPipelineLayout;
     spk::Pipeline gPassPipeline;
     std::vector<spk::Image> depthMaps;
     std::vector<spk::ImageView> depthMapImageViews;
@@ -96,6 +98,7 @@ private:
     vk::Sampler donutSampler;
     vk::QueryPool queryPool;
     BasicMesh donut;
+    NotTexturedMesh icing;
 
     vk::Semaphore imageAcquiredSemaphore;
     vk::Semaphore imageRenderedSemaphore;

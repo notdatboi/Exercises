@@ -18,7 +18,7 @@ Application::Application()
     createDepthMaps();
     createGBufferPass();
     createRenderPass();
-    loadDonutMesh("resources/DonutWithStoneTextureNotTriangulated.obj");
+    loadMeshes("resources/DonutWithStoneTextureNotTriangulated.obj");
     createQueryPool();
     recordRenderPass();
 
@@ -312,13 +312,16 @@ void Application::getMeshVertexData(const aiMesh* mesh, std::vector<Vertex>& ver
     vertices.resize(vertexCount);
     for(auto currentVertexIndex = 0; currentVertexIndex < vertexCount; ++currentVertexIndex)
     {
+        Vertex vertex;
         const auto& currentAiVertex = *(mesh->mVertices + currentVertexIndex);
         const auto& currentAiNormal = *(mesh->mNormals + currentVertexIndex);
-        const auto& currentAiUV = *(mesh->mTextureCoords[0] + currentVertexIndex);
-        Vertex vertex;
+        if(mesh->GetNumUVChannels() > 0)
+        {
+            const auto& currentAiUV = *(mesh->mTextureCoords[0] + currentVertexIndex);
+            vertex.uv = {currentAiUV.x, currentAiUV.y};
+        }
         vertex.position = {currentAiVertex.x, currentAiVertex.y, currentAiVertex.z};
         vertex.normal = {currentAiNormal.x, currentAiNormal.y, currentAiNormal.z};
-        vertex.uv = {currentAiUV.x, currentAiUV.y};
         vertices[currentVertexIndex] = vertex;
     }
 }
@@ -351,36 +354,58 @@ const std::vector<uint32_t> Application::getMeshIndexData(const aiMesh* mesh) co
     return indices;
 }
 
-void Application::loadDonutMesh(const std::string donutFilename)
+void Application::loadMeshes(const std::string filename)
 {
     Assimp::Importer importer;
-    const aiScene* scene = importer.ReadFile(donutFilename, aiProcess_JoinIdenticalVertices/*aiProcess_Triangulate*/);
+    const aiScene* scene = importer.ReadFile(filename, aiProcess_JoinIdenticalVertices/*aiProcess_Triangulate*/);
     if(!scene) throw std::runtime_error("Failed to load scene.\n");
+    std::vector<Vertex> icingVertices = getMeshVertexData(*(scene->mMeshes));
+    std::vector<uint32_t> icingIndices = getMeshIndexData(*(scene->mMeshes));
+    std::vector<vk::DescriptorSet> icingDescriptorSets = descriptorPool.getDescriptorSets({mvpSetIndex, cameraSetIndex});
+    icing.create(icingVertices, icingIndices, icingDescriptorSets);
     std::vector<Vertex> donutVertices = getMeshVertexData(*(scene->mMeshes + 1));
     std::vector<uint32_t> donutIndices = getMeshIndexData(*(scene->mMeshes + 1));
-    std::vector<vk::DescriptorSet> descriptorSets = descriptorPool.getDescriptorSets({mvpSetIndex, cameraSetIndex, donutInstancesSetIndex, textureSetIndex});
-    donut.create(donutVertices, donutIndices, descriptorSets);
+    std::vector<vk::DescriptorSet> donutDescriptorSets = descriptorPool.getDescriptorSets({mvpSetIndex, cameraSetIndex, donutInstancesSetIndex, textureSetIndex});
+    donut.create(donutVertices, donutIndices, donutDescriptorSets);
 
-    std::vector<spk::ShaderInfo> shaderInfos(5);
-    shaderInfos[0].filename = "shaders/vert.spv";
-    shaderInfos[0].type = vk::ShaderStageFlagBits::eVertex;
-    shaderInfos[1].filename = "shaders/tesc.spv";
-    shaderInfos[1].type = vk::ShaderStageFlagBits::eTessellationControl;
-    shaderInfos[2].filename = "shaders/tese.spv";
-    shaderInfos[2].type = vk::ShaderStageFlagBits::eTessellationEvaluation;
-    shaderInfos[3].filename = "shaders/frag.spv";
-    shaderInfos[3].type = vk::ShaderStageFlagBits::eFragment;
-    shaderInfos[4].filename = "shaders/geom.spv";
-    shaderInfos[4].type = vk::ShaderStageFlagBits::eGeometry;
+    std::vector<spk::ShaderInfo> donutShaderInfos(5);
+    donutShaderInfos[0].filename = "shaders/vert.spv";
+    donutShaderInfos[0].type = vk::ShaderStageFlagBits::eVertex;
+    donutShaderInfos[1].filename = "shaders/tesc.spv";
+    donutShaderInfos[1].type = vk::ShaderStageFlagBits::eTessellationControl;
+    donutShaderInfos[2].filename = "shaders/tese.spv";
+    donutShaderInfos[2].type = vk::ShaderStageFlagBits::eTessellationEvaluation;
+    donutShaderInfos[3].filename = "shaders/frag.spv";
+    donutShaderInfos[3].type = vk::ShaderStageFlagBits::eFragment;
+    donutShaderInfos[4].filename = "shaders/geom.spv";
+    donutShaderInfos[4].type = vk::ShaderStageFlagBits::eGeometry;
+    std::vector<spk::ShaderInfo> icingShaderInfos(5);
+    icingShaderInfos[0].filename = "shaders/ntvert.spv";
+    icingShaderInfos[0].type = vk::ShaderStageFlagBits::eVertex;
+    icingShaderInfos[1].filename = "shaders/nttesc.spv";
+    icingShaderInfos[1].type = vk::ShaderStageFlagBits::eTessellationControl;
+    icingShaderInfos[2].filename = "shaders/nttese.spv";
+    icingShaderInfos[2].type = vk::ShaderStageFlagBits::eTessellationEvaluation;
+    icingShaderInfos[3].filename = "shaders/ntfrag.spv";
+    icingShaderInfos[3].type = vk::ShaderStageFlagBits::eFragment;
+    icingShaderInfos[4].filename = "shaders/ntgeom.spv";
+    icingShaderInfos[4].type = vk::ShaderStageFlagBits::eGeometry;
 
     gPassPipelineLayout = descriptorPool.getPipelineLayout({0, 3, 1, 2});
+    icingPipelineLayout = descriptorPool.getPipelineLayout({0, 3});
 
-    spk::AdditionalInfo additionalInfo;
-    additionalInfo.layout = gPassPipelineLayout;
-    additionalInfo.renderPass = renderPass.getRenderPass();
-    additionalInfo.subpassIndex = gBufferPassID;
+    spk::AdditionalInfo donutAdditionalInfo;
+    donutAdditionalInfo.layout = gPassPipelineLayout;
+    donutAdditionalInfo.renderPass = renderPass.getRenderPass();
+    donutAdditionalInfo.subpassIndex = gBufferPassID;
 
-    donut.createPipeline(0, shaderInfos, {windowWidth, windowHeight}, additionalInfo);
+    spk::AdditionalInfo icingAdditionalInfo;
+    icingAdditionalInfo.layout = icingPipelineLayout;
+    icingAdditionalInfo.renderPass = renderPass.getRenderPass();
+    icingAdditionalInfo.subpassIndex = gBufferPassID;
+
+    donut.createPipeline(0, donutShaderInfos, {windowWidth, windowHeight}, donutAdditionalInfo);
+    icing.createPipeline(0, icingShaderInfos, {windowWidth, windowHeight}, icingAdditionalInfo);
 }
 
 void Application::createQueryPool()
@@ -408,6 +433,10 @@ void Application::recordRenderPass()
             .bindIndexBuffer(gBufferPass)
             .bindVertexBuffer(gBufferPass)
             .drawIndexed(gBufferPass, 2);
+        icing.bindPipeline(gBufferPass, 0)
+            .bindIndexBuffer(gBufferPass)
+            .bindVertexBuffer(gBufferPass)
+            .drawIndexed(gBufferPass);
         gBufferPass.endRecording();
         vk::Rect2D renderArea;
         renderArea.setExtent({windowWidth, windowHeight})
@@ -541,6 +570,10 @@ void Application::destroy()
     if(gPassPipelineLayout)
     {
         descriptorPool.destroyPipelineLayout(gPassPipelineLayout);
+    }
+    if(icingPipelineLayout)
+    {
+        descriptorPool.destroyPipelineLayout(icingPipelineLayout);
     }
     if(donutSampler)
     {
