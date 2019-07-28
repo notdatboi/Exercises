@@ -25,6 +25,9 @@ obj/Mesh.o: src/Mesh.cpp include/Mesh.hpp
 obj/BasicMesh.o: src/BasicMesh.cpp include/BasicMesh.hpp include/Mesh.hpp
 	$(CC) -c $< -o $@ -g
 
+obj/NotTexturedMesh.o: src/NotTexturedMesh.cpp include/NotTexturedMesh.hpp include/Mesh.hpp
+	$(CC) -c $< -o $@ -g
+
 obj/Application.o: src/Application.cpp \
 	include/Application.hpp \
 	include/Mesh.hpp \
