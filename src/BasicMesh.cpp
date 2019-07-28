@@ -1,4 +1,4 @@
-#include"BasicMesh.hpp"
+#include"../include/BasicMesh.hpp"
 
 void BasicMesh::createPipeline(const uint32_t pipelineIndex, const std::vector<spk::ShaderInfo> shaderInfos, const vk::Extent2D extent, const spk::AdditionalInfo& info)
 {

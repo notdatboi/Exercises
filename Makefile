@@ -1,8 +1,8 @@
 LIBS= -lvulkan -lglfw -lassimp 
 CC=g++ -std=c++17
 BIN=a.out
-SOURCES=$(wildcard *.cpp)
-OBJS=$(patsubst %.cpp,obj/%.o,$(SOURCES))
+SOURCES=$(wildcard src/*.cpp)
+OBJS=$(patsubst src/%.cpp,obj/%.o,$(SOURCES))
 SPARKOBJS=$(wildcard ../Vulkan-wrapper/obj/*.o)
 
 all: $(BIN)
@@ -13,25 +13,25 @@ clean:
 $(BIN): $(OBJS)
 	$(CC) $(OBJS) $(SPARKOBJS) $(LIBS)
 
-obj/main.o: main.cpp Application.hpp
+obj/main.o: src/main.cpp include/Application.hpp
 	$(CC) -c $< -o $@ -g
 
-obj/Camera.o: Camera.cpp Camera.hpp
+obj/Camera.o: src/Camera.cpp include/Camera.hpp
 	$(CC) -c $< -o $@ -g
 
-obj/Mesh.o: Mesh.cpp Mesh.hpp
+obj/Mesh.o: src/Mesh.cpp include/Mesh.hpp
 	$(CC) -c $< -o $@ -g
 
-obj/BasicMesh.o: BasicMesh.cpp BasicMesh.hpp Mesh.hpp
+obj/BasicMesh.o: src/BasicMesh.cpp include/BasicMesh.hpp include/Mesh.hpp
 	$(CC) -c $< -o $@ -g
 
-obj/Application.o: Application.cpp \
-	Application.hpp \
-	Mesh.hpp \
-	TextureHolder.hpp \
-	Camera.hpp
+obj/Application.o: src/Application.cpp \
+	include/Application.hpp \
+	include/Mesh.hpp \
+	include/TextureHolder.hpp \
+	include/Camera.hpp
 	$(CC) -c $< -o $@ -g
 
-obj/TextureHolder.o: TextureHolder.cpp \
-	TextureHolder.hpp
+obj/TextureHolder.o: src/TextureHolder.cpp \
+	include/TextureHolder.hpp
 	$(CC) -c $< -o $@ -g

@@ -1,4 +1,4 @@
-#include"Application.hpp"
+#include"../include/Application.hpp"
 
 Application::Application()
 {
@@ -18,7 +18,7 @@ Application::Application()
     createDepthMaps();
     createGBufferPass();
     createRenderPass();
-    loadDonutMesh("DonutWithStoneTextureNotTriangulated.obj");
+    loadDonutMesh("resources/DonutWithStoneTextureNotTriangulated.obj");
     createQueryPool();
     recordRenderPass();
 
@@ -178,7 +178,7 @@ void Application::loadAndWriteDonutTexture()
 {
     const auto& logicalDevice = spk::system::System::getInstance()->getLogicalDevice();
 
-    textureHolder.addTexture(vk::Format::eR8G8B8A8Unorm, "textureWALL.jpg", "Wall");
+    textureHolder.addTexture(vk::Format::eR8G8B8A8Unorm, "resources/textureWALL.jpg", "Wall");
     vk::DescriptorImageInfo imageInfo;
 
     vk::SamplerCreateInfo samplerInfo;
@@ -362,15 +362,15 @@ void Application::loadDonutMesh(const std::string donutFilename)
     donut.create(donutVertices, donutIndices, descriptorSets);
 
     std::vector<spk::ShaderInfo> shaderInfos(5);
-    shaderInfos[0].filename = "vert.spv";
+    shaderInfos[0].filename = "shaders/vert.spv";
     shaderInfos[0].type = vk::ShaderStageFlagBits::eVertex;
-    shaderInfos[1].filename = "tesc.spv";
+    shaderInfos[1].filename = "shaders/tesc.spv";
     shaderInfos[1].type = vk::ShaderStageFlagBits::eTessellationControl;
-    shaderInfos[2].filename = "tese.spv";
+    shaderInfos[2].filename = "shaders/tese.spv";
     shaderInfos[2].type = vk::ShaderStageFlagBits::eTessellationEvaluation;
-    shaderInfos[3].filename = "frag.spv";
+    shaderInfos[3].filename = "shaders/frag.spv";
     shaderInfos[3].type = vk::ShaderStageFlagBits::eFragment;
-    shaderInfos[4].filename = "geom.spv";
+    shaderInfos[4].filename = "shaders/geom.spv";
     shaderInfos[4].type = vk::ShaderStageFlagBits::eGeometry;
 
     gPassPipelineLayout = descriptorPool.getPipelineLayout({0, 3, 1, 2});

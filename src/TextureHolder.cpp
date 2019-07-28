@@ -1,6 +1,6 @@
-#include"TextureHolder.hpp"
+#include"../include/TextureHolder.hpp"
 #define STB_IMAGE_IMPLEMENTATION
-#include"StbLibrary/stb_image.h"
+#include"../StbLibrary/stb_image.h"
 
 TextureHolder& TextureHolder::addTexture(const vk::Format format, 
     const std::string filename,
