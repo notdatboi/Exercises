@@ -3,6 +3,7 @@ glslangValidator -V FragmentShader.frag
 glslangValidator -V TessellationControlShader.tesc
 glslangValidator -V TessellationEvaluationShader.tese
 glslangValidator -V GeometryShader.geom
+glslangValidator -V NotScaledGeometryShader.geom -o nsgeom.spv
 glslangValidator -V NotTexturedShader.vert -o ntvert.spv
 glslangValidator -V NotTexturedShader.frag -o ntfrag.spv
 glslangValidator -V NotTexturedShader.tesc -o nttesc.spv
