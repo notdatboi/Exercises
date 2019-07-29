@@ -2,11 +2,14 @@
 
 void Mesh::create(const std::vector<Vertex>& vertices, 
     const std::vector<uint32_t>& indices, 
-    const std::vector<vk::DescriptorSet>& descriptorSets)
+    const std::vector<vk::DescriptorSet>& descriptorSets,
+    const uint32_t pipelineCount)
 {
     const auto& logicalDevice = spk::system::System::getInstance()->getLogicalDevice();
 
     this->descriptorSets = descriptorSets;
+    pipelines.resize(pipelineCount);
+    shaderSets.resize(pipelineCount);
 
     vk::FenceCreateInfo fenceInfo;
     if(logicalDevice.createFence(&fenceInfo, nullptr, bufferUpdateFences) != vk::Result::eSuccess) throw std::runtime_error("Failed to create fence!\n");
@@ -114,12 +117,9 @@ const Mesh& Mesh::drawIndexed(spk::Subpass& subpass, const uint32_t instanceCoun
 
 void Mesh::loadShaders(const uint32_t shaderSetIndex, const std::vector<spk::ShaderInfo> shaderInfos)
 {
-    if(shaderSets.size() <= shaderSetIndex)
+    if(shaderSetIndex >= shaderSets.size())
     {
-        for(auto index = shaderSets.size(); index <= shaderSetIndex; ++index)
-        {
-            shaderSets.push_back(spk::ShaderSet());
-        }
+        throw std::invalid_argument("Shader set index is out of range.\n");
     }
     shaderSets[shaderSetIndex].create(shaderInfos);
 }

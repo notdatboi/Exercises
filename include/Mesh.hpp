@@ -22,7 +22,8 @@ class Mesh                  // abstract mesh class
 public:
     void create(const std::vector<Vertex>& vertices, 
         const std::vector<uint32_t>& indices, 
-        const std::vector<vk::DescriptorSet>& descriptorSets);
+        const std::vector<vk::DescriptorSet>& descriptorSets,
+        const uint32_t pipelineCount);
     virtual void createPipeline(const uint32_t pipelineIndex, const std::vector<spk::ShaderInfo> shaderInfos, const vk::Extent2D extent, const spk::AdditionalInfo& info) = 0;
     const Mesh& bindVertexBuffer(spk::Subpass& subpass) const;
     const Mesh& bindIndexBuffer(spk::Subpass& subpass) const;
