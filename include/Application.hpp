@@ -54,9 +54,11 @@ private:
     void updateMVPDescriptorSet();
     void updateCameraDescriptorSet();
     void updateDonutInstancesDescriptorSet();
+    void updateScaleDescriptorSet();
     void updateMVPBuffer();
     void updateCameraBuffer();
     void updateDonutInstancesBuffer();
+    void updateScaleBuffer();
 
     const unsigned int windowWidth = 1024;
     const unsigned int windowHeight = 720;
@@ -70,14 +72,18 @@ private:
     spk::Buffer mvpBuffer;
     spk::Buffer cameraBuffer;
     spk::Buffer donutInstancesBuffer;
+    spk::Buffer scaleBuffer;
     const uint32_t mvpSetIndex = 0;
     const uint32_t cameraSetIndex = 1;
     const uint32_t donutInstancesSetIndex = 2;
     const uint32_t textureSetIndex = 3;
+    const uint32_t scaleSetIndex = 4;
 
     const uint32_t gBufferPassID = 0;
     vk::Format swapchainImageFormat = vk::Format::eR8G8B8A8Snorm;
     vk::Format depthMapFormat;
+
+    float scale = 1;
     
     GLFWwindow* window;
     vk::SurfaceKHR surface;
@@ -87,6 +93,7 @@ private:
     //spk::ShaderSet depthPrepassShaders;
     spk::ShaderSet gPassShaders;
     vk::PipelineLayout gPassPipelineLayout;
+    vk::PipelineLayout notScaledPipelineLayout;
     vk::PipelineLayout icingPipelineLayout;
     spk::Pipeline gPassPipeline;
     std::vector<spk::Image> depthMaps;

@@ -14,6 +14,7 @@ Application::Application()
     updateDonutInstancesDescriptorSet();
     updateMVPDescriptorSet();
     updateCameraDescriptorSet();
+    updateScaleDescriptorSet();
     loadAndWriteDonutTexture();
     createDepthMaps();
     createGBufferPass();
@@ -34,6 +35,7 @@ void Application::run()
 
     auto startClock = std::chrono::system_clock::now();
     double timeCounter = 0;
+    float timeFromTheStart = 0;
 
     while(!glfwWindowShouldClose(window))
     {
@@ -41,6 +43,7 @@ void Application::run()
         auto endClock = std::chrono::system_clock::now();
         std::chrono::duration<double> elapsed = endClock - startClock;
         timeCounter += elapsed.count();
+        timeFromTheStart += elapsed.count();
         startClock = endClock;
 
         processInput(static_cast<float>(elapsed.count()));
@@ -48,8 +51,12 @@ void Application::run()
         if(timeCounter >= frameTime)
         {
             timeCounter -= frameTime;
+
             updateMVPBuffer();
             updateCameraBuffer();
+            scale = timeFromTheStart;
+            updateScaleBuffer();
+
             const auto nextImageIndex = swapchain.acquireNextImageIndex(imageAcquiredSemaphore, imageAcquiredFence);
             logicalDevice.waitForFences(1, &imageAcquiredFence, true, ~0U);
             logicalDevice.resetFences(1, &imageAcquiredFence);
@@ -86,7 +93,7 @@ void Application::run()
             //    << camera.getNormalizedDirection().x << ' ' << camera.getNormalizedDirection().y << ' ' << camera.getNormalizedDirection().z << '\n';
             uint32_t queryResult;
             if(logicalDevice.getQueryPoolResults(queryPool, nextImageIndex, 1, 4, reinterpret_cast<void*>(&queryResult), 4, vk::QueryResultFlagBits::eWait) != vk::Result::eSuccess) spk::system::yeet("Failed to fetch query pool results!\n");
-            std::cout << queryResult << '\n';
+            //std::cout << queryResult << '\n';
         }
     }
 }
@@ -131,12 +138,12 @@ void Application::loadDescriptorSets()
 {
     std::vector<vk::DescriptorPoolSize> poolSizes(2);
     poolSizes[0].setType(vk::DescriptorType::eUniformBuffer)
-        .setDescriptorCount(3);
+        .setDescriptorCount(4);
     poolSizes[1].setType(vk::DescriptorType::eCombinedImageSampler)
         .setDescriptorCount(1);
-    descriptorPool.create(4, poolSizes, vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet);
+    descriptorPool.create(5, poolSizes, vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet);
 
-    std::vector<vk::DescriptorSetLayoutBinding> uniformGeomB0C1(1);   // uniform buffer, geometry shader stage, binding = 0, count = 1; usage: mvp
+    std::vector<vk::DescriptorSetLayoutBinding> uniformGeomB0C1(1);   // uniform buffer, geometry shader stage, binding = 0, count = 1; usage: mvp, scale
     uniformGeomB0C1[0].setBinding(0)
         .setDescriptorCount(1)
         .setDescriptorType(vk::DescriptorType::eUniformBuffer)
@@ -169,7 +176,7 @@ void Application::loadDescriptorSets()
         .addDescriptorSetLayout(combinedImageSamplerFragmentB0C1)
         .addDescriptorSetLayout(uniformFragmentB0C1);
 
-    std::vector<uint32_t> layoutIndices = {0, 3, 1, 2};
+    std::vector<uint32_t> layoutIndices = {0, 3, 1, 2, 0};
 
     descriptorPool.allocateDescriptorSets(layoutIndices);
 }
@@ -265,7 +272,7 @@ void Application::createGBufferPass()
         colorAttachmentReferences, 
         &depthAttachmentReference,
         {}, 
-        vk::PipelineStageFlagBits::eFragmentShader | vk::PipelineStageFlagBits::eVertexShader, 
+        vk::PipelineStageFlagBits::eAllGraphics, 
         vk::AccessFlagBits::eColorAttachmentWrite);
 }
 
@@ -362,11 +369,11 @@ void Application::loadMeshes(const std::string filename)
     std::vector<Vertex> icingVertices = getMeshVertexData(*(scene->mMeshes));
     std::vector<uint32_t> icingIndices = getMeshIndexData(*(scene->mMeshes));
     std::vector<vk::DescriptorSet> icingDescriptorSets = descriptorPool.getDescriptorSets({mvpSetIndex, cameraSetIndex});
-    icing.create(icingVertices, icingIndices, icingDescriptorSets);
+    icing.create(icingVertices, icingIndices, icingDescriptorSets, 1);
     std::vector<Vertex> donutVertices = getMeshVertexData(*(scene->mMeshes + 1));
     std::vector<uint32_t> donutIndices = getMeshIndexData(*(scene->mMeshes + 1));
-    std::vector<vk::DescriptorSet> donutDescriptorSets = descriptorPool.getDescriptorSets({mvpSetIndex, cameraSetIndex, donutInstancesSetIndex, textureSetIndex});
-    donut.create(donutVertices, donutIndices, donutDescriptorSets);
+    std::vector<vk::DescriptorSet> donutDescriptorSets = descriptorPool.getDescriptorSets({mvpSetIndex, cameraSetIndex, donutInstancesSetIndex, textureSetIndex, scaleSetIndex});
+    donut.create(donutVertices, donutIndices, donutDescriptorSets, 2);
 
     std::vector<spk::ShaderInfo> donutShaderInfos(5);
     donutShaderInfos[0].filename = "shaders/vert.spv";
@@ -391,7 +398,8 @@ void Application::loadMeshes(const std::string filename)
     icingShaderInfos[4].filename = "shaders/ntgeom.spv";
     icingShaderInfos[4].type = vk::ShaderStageFlagBits::eGeometry;
 
-    gPassPipelineLayout = descriptorPool.getPipelineLayout({0, 3, 1, 2});
+    gPassPipelineLayout = descriptorPool.getPipelineLayout({0, 3, 1, 2, 0});
+    notScaledPipelineLayout = descriptorPool.getPipelineLayout({0, 3, 1, 2, 0});
     icingPipelineLayout = descriptorPool.getPipelineLayout({0, 3});
 
     spk::AdditionalInfo donutAdditionalInfo;
@@ -404,7 +412,16 @@ void Application::loadMeshes(const std::string filename)
     icingAdditionalInfo.renderPass = renderPass.getRenderPass();
     icingAdditionalInfo.subpassIndex = gBufferPassID;
 
+    spk::AdditionalInfo notScaledAdditionalInfo;
+    notScaledAdditionalInfo.layout = notScaledPipelineLayout;
+    notScaledAdditionalInfo.renderPass = renderPass.getRenderPass();
+    notScaledAdditionalInfo.subpassIndex = gBufferPassID;
+
+
     donut.createPipeline(0, donutShaderInfos, {windowWidth, windowHeight}, donutAdditionalInfo);
+    auto notScaledDonutShaderInfos = donutShaderInfos;
+    notScaledDonutShaderInfos[4].filename = "shaders/nsgeom.spv";
+    donut.createPipeline(1, notScaledDonutShaderInfos, {windowWidth, windowHeight}, notScaledAdditionalInfo);
     icing.createPipeline(0, icingShaderInfos, {windowWidth, windowHeight}, icingAdditionalInfo);
 }
 
@@ -430,6 +447,10 @@ void Application::recordRenderPass()
             .beginRecording(renderPass.getRenderPass(), framebuffer);
         donut.bindDescriptorSets(gBufferPass, 0)
             .bindPipeline(gBufferPass, 0)
+            .bindIndexBuffer(gBufferPass)
+            .bindVertexBuffer(gBufferPass)
+            .drawIndexed(gBufferPass, 2)
+            .bindPipeline(gBufferPass, 1)
             .bindIndexBuffer(gBufferPass)
             .bindVertexBuffer(gBufferPass)
             .drawIndexed(gBufferPass, 2);
@@ -504,9 +525,11 @@ void Application::createDescriptorBuffers()
     mvpBuffer.create(sizeof(MVP), vk::BufferUsageFlagBits::eUniformBuffer, false, false);
     cameraBuffer.create(sizeof(glm::vec4) * 2, vk::BufferUsageFlagBits::eUniformBuffer, false, false);
     donutInstancesBuffer.create(sizeof(glm::vec4) * 2, vk::BufferUsageFlagBits::eUniformBuffer, false, false);
+    scaleBuffer.create(sizeof(float), vk::BufferUsageFlagBits::eUniformBuffer, false, false);
     mvpBuffer.bindMemory();
     cameraBuffer.bindMemory();
     donutInstancesBuffer.bindMemory();
+    scaleBuffer.bindMemory();
 }
 
 void Application::updateMVPDescriptorSet()
@@ -545,6 +568,18 @@ void Application::updateDonutInstancesDescriptorSet()
     descriptorPool.writeDescriptorSetBuffer(donutInstancesSetIndex, 0, vk::DescriptorType::eUniformBuffer, info);
 }
 
+void Application::updateScaleDescriptorSet()
+{
+    updateScaleBuffer();
+
+    vk::DescriptorBufferInfo info;
+    info.setBuffer(scaleBuffer.getBuffer())
+        .setOffset(0)
+        .setRange(VK_WHOLE_SIZE);
+
+    descriptorPool.writeDescriptorSetBuffer(scaleSetIndex, 0, vk::DescriptorType::eUniformBuffer, info);
+}
+
 void Application::updateMVPBuffer()
 {
     mvpBuffer.updateCPUAccessible(reinterpret_cast<const void*>(&mvp));
@@ -563,13 +598,21 @@ void Application::updateDonutInstancesBuffer()
     donutInstancesBuffer.updateCPUAccessible(reinterpret_cast<const void*>(donutInstances.data()));
 }
 
+void Application::updateScaleBuffer()
+{
+    scaleBuffer.updateCPUAccessible(&scale);
+}
+
 void Application::destroy()
 {
-    // TODO: destroy everything else too
     const auto& logicalDevice = spk::system::System::getInstance()->getLogicalDevice();
     if(gPassPipelineLayout)
     {
         descriptorPool.destroyPipelineLayout(gPassPipelineLayout);
+    }
+    if(notScaledPipelineLayout)
+    {
+        descriptorPool.destroyPipelineLayout(notScaledPipelineLayout);
     }
     if(icingPipelineLayout)
     {

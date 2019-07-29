@@ -2,12 +2,9 @@
 
 void BasicMesh::createPipeline(const uint32_t pipelineIndex, const std::vector<spk::ShaderInfo> shaderInfos, const vk::Extent2D extent, const spk::AdditionalInfo& info)
 {
-    if(pipelines.size() <= pipelineIndex)
+    if(pipelineIndex >= shaderSets.size())
     {
-        for(auto index = pipelines.size(); index <= pipelineIndex; ++index)
-        {
-            pipelines.push_back(spk::Pipeline());
-        }
+        throw std::invalid_argument("Pipeline index is out of range.\n");
     }
     loadShaders(pipelineIndex, shaderInfos);
 
