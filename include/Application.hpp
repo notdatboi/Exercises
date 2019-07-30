@@ -45,8 +45,8 @@ private:
     void createQueryPool();
     void recordRenderPass();
 
-    void getMeshVertexData(const aiMesh* mesh, std::vector<Vertex>& vertices) const;
-    const std::vector<Vertex> getMeshVertexData(const aiMesh* mesh) const;
+    void getMeshVertexData(const aiMesh* mesh, std::vector<BasicVertex>& vertices) const;
+    const std::vector<BasicVertex> getMeshVertexData(const aiMesh* mesh) const;
     void getMeshIndexData(const aiMesh* mesh, std::vector<uint32_t>& indices) const;
     const std::vector<uint32_t> getMeshIndexData(const aiMesh* mesh) const;
 
@@ -104,8 +104,8 @@ private:
     spk::RenderPass renderPass;
     vk::Sampler donutSampler;
     vk::QueryPool queryPool;
-    BasicMesh donut;
-    NotTexturedMesh icing;
+    BasicMesh<BasicVertex> donut;
+    NotTexturedMesh<BasicVertex> icing;
 
     vk::Semaphore imageAcquiredSemaphore;
     vk::Semaphore imageRenderedSemaphore;
