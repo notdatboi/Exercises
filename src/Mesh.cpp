@@ -88,6 +88,7 @@ void Mesh::load(const aiMesh& mesh)
     vertexBufferOnCPU.bindMemory();
     indexBufferOnCPU.bindMemory();
     void* vertexBufferDataPtr = vertexBufferOnCPU.getCPUAccessibleDataPtr();
+    char* vertexBufferDataCharPtrCasted = reinterpret_cast<char*>(vertexBufferDataPtr);
 
     for(int index = 0; index < vertexCount; ++index)
     {
@@ -105,7 +106,7 @@ void Mesh::load(const aiMesh& mesh)
                         vertex.uv = glm::vec2((mesh.mTextureCoords[textureCoordsIndex] + index)->x, (mesh.mTextureCoords[textureCoordsIndex] + index)->y);
                         vertex.tangent = glm::vec3((mesh.mTangents + index)->x, (mesh.mTangents + index)->y, (mesh.mTangents + index)->z);
                         vertex.bitangent = glm::vec3((mesh.mBitangents + index)->x, (mesh.mBitangents + index)->y, (mesh.mBitangents + index)->z);
-                        memcpy(vertexBufferDataPtr + sizeof(VertexPNUTB) * index, &vertex, sizeof(VertexPNUTB));
+                        memcpy(vertexBufferDataCharPtrCasted + sizeof(VertexPNUTB) * index, &vertex, sizeof(VertexPNUTB));
                     }
                     else
                     {
@@ -113,7 +114,7 @@ void Mesh::load(const aiMesh& mesh)
                         vertex.position = glm::vec3((mesh.mVertices + index)->x, (mesh.mVertices + index)->y, (mesh.mVertices + index)->z);
                         vertex.normal = glm::vec3((mesh.mNormals + index)->x, (mesh.mNormals + index)->y, (mesh.mNormals + index)->z);
                         vertex.uv = glm::vec2((mesh.mTextureCoords[textureCoordsIndex] + index)->x, (mesh.mTextureCoords[textureCoordsIndex] + index)->y);
-                        memcpy(vertexBufferDataPtr + sizeof(VertexPNU) * index, &vertex, sizeof(VertexPNU));
+                        memcpy(vertexBufferDataCharPtrCasted + sizeof(VertexPNU) * index, &vertex, sizeof(VertexPNU));
                     }
                 }
                 else
@@ -121,14 +122,14 @@ void Mesh::load(const aiMesh& mesh)
                     VertexPN vertex;
                     vertex.position = glm::vec3((mesh.mVertices + index)->x, (mesh.mVertices + index)->y, (mesh.mVertices + index)->z);
                     vertex.normal = glm::vec3((mesh.mNormals + index)->x, (mesh.mNormals + index)->y, (mesh.mNormals + index)->z);
-                    memcpy(vertexBufferDataPtr + sizeof(VertexPN) * index, &vertex, sizeof(VertexPN));
+                    memcpy(vertexBufferDataCharPtrCasted + sizeof(VertexPN) * index, &vertex, sizeof(VertexPN));
                 }
             }
             else
             {
                 VertexP vertex;
                 vertex.position = glm::vec3((mesh.mVertices + index)->x, (mesh.mVertices + index)->y, (mesh.mVertices + index)->z);
-                memcpy(vertexBufferDataPtr + sizeof(VertexP) * index, &vertex, sizeof(VertexP));
+                memcpy(vertexBufferDataCharPtrCasted + sizeof(VertexP) * index, &vertex, sizeof(VertexP));
             }
         }
     }
@@ -136,6 +137,7 @@ void Mesh::load(const aiMesh& mesh)
     vertexBufferOnCPU.unmapCPUAccessibleDataPtr();
 
     void* indexBufferDataPtr = indexBufferOnCPU.getCPUAccessibleDataPtr();
+    char* indexBufferDataCharPtrCasted = reinterpret_cast<char*>(indexBufferDataPtr);
 
     size_t indexBufferIndex = 0;
     for(auto currentFaceId = 0; currentFaceId < faceCount; ++currentFaceId)
@@ -143,7 +145,7 @@ void Mesh::load(const aiMesh& mesh)
         const auto& face = *(mesh.mFaces + currentFaceId);
         for(auto faceIndexId = 0; faceIndexId < face.mNumIndices; ++faceIndexId)
         {
-            memcpy(indexBufferDataPtr + sizeof(uint32_t) * indexBufferIndex, face.mIndices + faceIndexId, sizeof(uint32_t));
+            memcpy(indexBufferDataCharPtrCasted + sizeof(uint32_t) * indexBufferIndex, face.mIndices + faceIndexId, sizeof(uint32_t));
             ++indexBufferIndex;
         }
     }
