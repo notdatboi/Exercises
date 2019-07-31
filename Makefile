@@ -1,5 +1,5 @@
 LIBS= -lvulkan -lglfw -lassimp 
-CC=g++ -std=c++17
+CC=g++ -std=c++17 -I./include
 BIN=a.out
 SOURCES=$(wildcard src/*.cpp)
 OBJS=$(patsubst src/%.cpp,obj/%.o,$(SOURCES))
@@ -37,4 +37,8 @@ obj/Application.o: src/Application.cpp \
 
 obj/TextureHolder.o: src/TextureHolder.cpp \
 	include/TextureHolder.hpp
+	$(CC) -c $< -o $@ -g
+
+obj/VertexClasses.o: src/VertexClasses.cpp \
+	include/VertexClasses.hpp
 	$(CC) -c $< -o $@ -g
