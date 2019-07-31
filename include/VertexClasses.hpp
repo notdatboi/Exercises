@@ -4,12 +4,35 @@
 #include<glm/glm.hpp>
 #include<glm/gtc/matrix_transform.hpp>
 
-class BasicVertex
+class VertexP
+{
+public:
+    alignas(16) glm::vec3 position;
+};
+
+class VertexPN
+{
+public:
+    alignas(16) glm::vec3 position;
+    alignas(16) glm::vec3 normal;
+};
+
+class VertexPNU
 {
 public:
     alignas(16) glm::vec3 position;
     alignas(16) glm::vec3 normal;
     alignas(8) glm::vec2 uv;
+};
+
+class VertexPNUTB
+{
+public:
+    alignas(16) glm::vec3 position;
+    alignas(16) glm::vec3 normal;
+    alignas(8) glm::vec2 uv;
+    alignas(16) glm::vec3 tangent;
+    alignas(16) glm::vec3 bitangent;
 };
 
 class AttributeInfo
@@ -24,27 +47,19 @@ class VertexDescription
 {
 public:
     VertexDescription() = default;
-    VertexDescription(const std::vector<AttributeInfo> attributes)
-    {
-        create(attributes);
-    }
-    void create(const std::vector<AttributeInfo> attributes)
-    {
-        attributeDescriptions.resize(attributes.size());
-        for(auto index = 0; index < attributes.size(); ++index)
-        {
-            attributeDescriptions[index].setBinding(0)
-                .setFormat(attributes[index].format)
-                .setLocation(index)
-                .setOffset(attributes[index].offset);
-        }
-    }
-    const std::vector<vk::VertexInputAttributeDescription>& getAttributeDescriptions() const
-    {
-        return attributeDescriptions;
-    }
+    VertexDescription(const std::vector<AttributeInfo> attributes);
+    void create(const std::vector<AttributeInfo> attributes);
+    const std::vector<vk::VertexInputAttributeDescription>& getAttributeDescriptions() const;
 private:
     std::vector<vk::VertexInputAttributeDescription> attributeDescriptions;
+};
+
+struct BasicVertexDescriptions
+{
+    static const VertexDescription VertexPDescription;
+    static const VertexDescription VertexPNDescription;
+    static const VertexDescription VertexPNUDescription;
+    static const VertexDescription VertexPNUTBDescription;
 };
 
 #endif
