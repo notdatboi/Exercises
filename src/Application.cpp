@@ -313,76 +313,15 @@ void Application::createRenderPass()        // and subpass dependency (l8r)
     }
 }
 
-void Application::getMeshVertexData(const aiMesh* mesh, std::vector<BasicVertex>& vertices) const
-{
-    auto vertexCount = mesh->mNumVertices;
-    vertices.resize(vertexCount);
-    for(auto currentVertexIndex = 0; currentVertexIndex < vertexCount; ++currentVertexIndex)
-    {
-        BasicVertex vertex;
-        const auto& currentAiVertex = *(mesh->mVertices + currentVertexIndex);
-        const auto& currentAiNormal = *(mesh->mNormals + currentVertexIndex);
-        if(mesh->GetNumUVChannels() > 0)
-        {
-            const auto& currentAiUV = *(mesh->mTextureCoords[0] + currentVertexIndex);
-            vertex.uv = {currentAiUV.x, currentAiUV.y};
-        }
-        vertex.position = {currentAiVertex.x, currentAiVertex.y, currentAiVertex.z};
-        vertex.normal = {currentAiNormal.x, currentAiNormal.y, currentAiNormal.z};
-        vertices[currentVertexIndex] = vertex;
-    }
-}
-
-const std::vector<BasicVertex> Application::getMeshVertexData(const aiMesh* mesh) const
-{
-    std::vector<BasicVertex> vertices;
-    getMeshVertexData(mesh, vertices);
-    return vertices;
-}
-
-void Application::getMeshIndexData(const aiMesh* mesh, std::vector<uint32_t>& indices) const
-{
-    const auto faceCount = mesh->mNumFaces;
-    indices.resize(faceCount * 4);
-    for(auto currentFaceIndex = 0; currentFaceIndex < faceCount; ++currentFaceIndex)
-    {
-        const auto& face = *(mesh->mFaces + currentFaceIndex);
-        for(auto faceIndexIndex = 0; faceIndexIndex < face.mNumIndices; ++faceIndexIndex)
-        {
-            indices[currentFaceIndex * 4 + faceIndexIndex] = *(face.mIndices + faceIndexIndex);
-        }
-    }
-}
-
-const std::vector<uint32_t> Application::getMeshIndexData(const aiMesh* mesh) const
-{
-    std::vector<uint32_t> indices;
-    getMeshIndexData(mesh, indices);
-    return indices;
-}
-
 void Application::loadMeshes(const std::string filename)
 {
     Assimp::Importer importer;
     const aiScene* scene = importer.ReadFile(filename, aiProcess_JoinIdenticalVertices/*aiProcess_Triangulate*/);
     if(!scene) throw std::runtime_error("Failed to load scene.\n");
-    std::vector<BasicVertex> icingVertices = getMeshVertexData(*(scene->mMeshes));
-    std::vector<uint32_t> icingIndices = getMeshIndexData(*(scene->mMeshes));
     std::vector<vk::DescriptorSet> icingDescriptorSets = descriptorPool.getDescriptorSets({mvpSetIndex, cameraSetIndex});
-    icing.create(icingVertices, icingIndices, icingDescriptorSets, 1);
-    std::vector<BasicVertex> donutVertices = getMeshVertexData(*(scene->mMeshes + 1));
-    std::vector<uint32_t> donutIndices = getMeshIndexData(*(scene->mMeshes + 1));
+    icing.create(*(*(scene->mMeshes)), icingDescriptorSets, 1);
     std::vector<vk::DescriptorSet> donutDescriptorSets = descriptorPool.getDescriptorSets({mvpSetIndex, cameraSetIndex, donutInstancesSetIndex, textureSetIndex, scaleSetIndex});
-    donut.create(donutVertices, donutIndices, donutDescriptorSets, 2);
-
-    AttributeInfo position, normal, uv;
-    position.format = vk::Format::eR32G32B32A32Sfloat;
-    position.offset = offsetof(BasicVertex, position);
-    normal.format = vk::Format::eR32G32B32A32Sfloat;
-    normal.offset = offsetof(BasicVertex, normal);
-    uv.format = vk::Format::eR32G32Sfloat;
-    uv.offset = offsetof(BasicVertex, uv);
-    VertexDescription basicVertexDescription({position, normal, uv}), notTexturedVertexDescription({position, normal});
+    donut.create(*(*(scene->mMeshes + 1)), donutDescriptorSets, 2);
 
     std::vector<spk::ShaderInfo> donutShaderInfos(5);
     donutShaderInfos[0].filename = "shaders/vert.spv";
@@ -426,11 +365,11 @@ void Application::loadMeshes(const std::string filename)
     notScaledAdditionalInfo.renderPass = renderPass.getRenderPass();
     notScaledAdditionalInfo.subpassIndex = gBufferPassID;
 
-    donut.createPipeline(0, basicVertexDescription, donutShaderInfos, {windowWidth, windowHeight}, donutAdditionalInfo);
+    donut.createPipeline(0, donutShaderInfos, {windowWidth, windowHeight}, donutAdditionalInfo);
     auto notScaledDonutShaderInfos = donutShaderInfos;
     notScaledDonutShaderInfos[4].filename = "shaders/nsgeom.spv";
-    donut.createPipeline(1, basicVertexDescription, notScaledDonutShaderInfos, {windowWidth, windowHeight}, notScaledAdditionalInfo);
-    icing.createPipeline(0, notTexturedVertexDescription, icingShaderInfos, {windowWidth, windowHeight}, icingAdditionalInfo);
+    donut.createPipeline(1, notScaledDonutShaderInfos, {windowWidth, windowHeight}, notScaledAdditionalInfo);
+    icing.createPipeline(0, icingShaderInfos, {windowWidth, windowHeight}, icingAdditionalInfo);
 }
 
 void Application::createQueryPool()

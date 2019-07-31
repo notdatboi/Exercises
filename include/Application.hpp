@@ -10,9 +10,6 @@
 //#include<Spark.hpp>
 #include"TextureHolder.hpp"
 #include"Camera.hpp"
-#include<assimp/Importer.hpp>
-#include<assimp/scene.h>
-#include<assimp/postprocess.h>
 #include<chrono>
 
 struct MVP
@@ -44,11 +41,6 @@ private:
     void loadMeshes(const std::string filename);
     void createQueryPool();
     void recordRenderPass();
-
-    void getMeshVertexData(const aiMesh* mesh, std::vector<BasicVertex>& vertices) const;
-    const std::vector<BasicVertex> getMeshVertexData(const aiMesh* mesh) const;
-    void getMeshIndexData(const aiMesh* mesh, std::vector<uint32_t>& indices) const;
-    const std::vector<uint32_t> getMeshIndexData(const aiMesh* mesh) const;
 
     void processInput(const float elapsedTime);
     void updateMVPDescriptorSet();
@@ -104,8 +96,8 @@ private:
     spk::RenderPass renderPass;
     vk::Sampler donutSampler;
     vk::QueryPool queryPool;
-    BasicMesh<BasicVertex> donut;
-    NotTexturedMesh<BasicVertex> icing;
+    BasicMesh donut;
+    NotTexturedMesh icing;
 
     vk::Semaphore imageAcquiredSemaphore;
     vk::Semaphore imageRenderedSemaphore;
