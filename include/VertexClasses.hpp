@@ -1,6 +1,6 @@
 #ifndef VERTEX_CLASSES_HPP
 #define VERTEX_CLASSES_HPP
-#include"../../Vulkan-wrapper/include/Spark.hpp"
+#include<Spark.hpp>
 #include<glm/glm.hpp>
 #include<glm/gtc/matrix_transform.hpp>
 

@@ -1,15 +1,15 @@
 #ifndef APPLICATION_HPP
 #define APPLICATION_HPP
 
-#include"BasicMesh.hpp"
-#include"NotTexturedMesh.hpp"
+#include<BasicMesh.hpp>
+#include<NotTexturedMesh.hpp>
 //#include<map>
 #include<string>
 #define GLFW_INCLUDE_VULKAN
 #include<GLFW/glfw3.h>
 //#include<Spark.hpp>
-#include"TextureHolder.hpp"
-#include"Camera.hpp"
+#include<TextureHolder.hpp>
+#include<Camera.hpp>
 #include<chrono>
 
 struct MVP

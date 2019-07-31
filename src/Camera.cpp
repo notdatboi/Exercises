@@ -1,4 +1,4 @@
-#include"../include/Camera.hpp"
+#include<Camera.hpp>
 
 Camera::Camera(): position({0, 0, 0}), yaw(0), pitch(0) {}
 

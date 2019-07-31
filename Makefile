@@ -1,5 +1,5 @@
 LIBS= -lvulkan -lglfw -lassimp 
-CC=g++ -std=c++17 -I./include
+CC=g++ -std=c++17 -I./include -I../Vulkan-wrapper/include -I./StbLibrary
 BIN=a.out
 SOURCES=$(wildcard src/*.cpp)
 OBJS=$(patsubst src/%.cpp,obj/%.o,$(SOURCES))
