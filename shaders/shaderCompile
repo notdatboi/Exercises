@@ -1,11 +1,8 @@
-glslangValidator -V VertexShader.vert
-glslangValidator -V FragmentShader.frag
-glslangValidator -V TessellationControlShader.tesc
-glslangValidator -V TessellationEvaluationShader.tese
-glslangValidator -V GeometryShader.geom
-glslangValidator -V NotScaledGeometryShader.geom -o nsgeom.spv
-glslangValidator -V NotTexturedShader.vert -o ntvert.spv
-glslangValidator -V NotTexturedShader.frag -o ntfrag.spv
-glslangValidator -V NotTexturedShader.tesc -o nttesc.spv
-glslangValidator -V NotTexturedShader.tese -o nttese.spv
-glslangValidator -V NotTexturedShader.geom -o ntgeom.spv
+glslangValidator -V Plane.vert -o PlaneVert.spv
+glslangValidator -V Plane.frag -o PlaneFrag.spv
+glslangValidator -V Plane.tesc -o PlaneTesc.spv
+glslangValidator -V Plane.tese -o PlaneTese.spv
+glslangValidator -V Plane.geom -o PlaneGeom.spv
+
+glslangValidator -V Lamp.vert -o LampVert.spv
+glslangValidator -V Lamp.frag -o LampFrag.spv
