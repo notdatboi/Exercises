@@ -37,7 +37,7 @@ void BasicMesh::createPipeline(const uint32_t pipelineIndex, const std::vector<s
         .setMaxDepth(1.0f);
 
     spk::TessellationState tessellationState;
-    tessellationState.patchControlPointCount = 4;
+    tessellationState.patchControlPointCount = 3;
 
     spk::ViewportState viewportState;
     viewportState.scissor = scissor;

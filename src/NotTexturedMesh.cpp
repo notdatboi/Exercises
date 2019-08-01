@@ -22,7 +22,7 @@ void NotTexturedMesh::createPipeline(const uint32_t pipelineIndex, const std::ve
 
     spk::InputAssemblyState assemblyState;
     assemblyState.enablePrimitiveRestart = false;
-    assemblyState.topology = vk::PrimitiveTopology::ePatchList;
+    assemblyState.topology = vk::PrimitiveTopology::eTriangleList;
 
     vk::Rect2D scissor;
     scissor.setOffset({0, 0})
@@ -37,7 +37,6 @@ void NotTexturedMesh::createPipeline(const uint32_t pipelineIndex, const std::ve
         .setMaxDepth(1.0f);
 
     spk::TessellationState tessellationState;
-    tessellationState.patchControlPointCount = 4;
 
     spk::ViewportState viewportState;
     viewportState.scissor = scissor;

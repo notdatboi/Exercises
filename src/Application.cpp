@@ -1,7 +1,8 @@
 #include<Application.hpp>
 
-Application::Application()
+Application::Application() : lampPositionsAndPowers(MAX_LAMPS_ON_SCENE)
 {
+    lampPositionsAndPowers[0] = {0, 0, 0.5, 0.9};
     mvp.model = glm::mat4(1);
     mvp.proj = glm::perspective(glm::radians<float>(60), windowWidth / (float)windowHeight, 0.0001f, 10.f);
     mvp.proj[1][1] = -mvp.proj[1][1];
@@ -11,20 +12,19 @@ Application::Application()
     createSwapchain();
     loadDescriptorSets();
     createDescriptorBuffers();
-    updateDonutInstancesDescriptorSet();
     updateMVPDescriptorSet();
     updateCameraDescriptorSet();
-    updateScaleDescriptorSet();
-    loadAndWriteDonutTexture();
+    updateLampDescriptorSet();
+    loadAndWritePlaneTexture();
     createDepthMaps();
     createGBufferPass();
     createRenderPass();
-    loadMeshes("resources/DonutWithStoneTextureNotTriangulated.obj");
+    loadMeshes();
     createQueryPool();
     recordRenderPass();
 
-    camera.setPosition({2, 2, 0});
-    camera.setRotation(180.f, 0);
+    camera.setPosition({0, 0, 1});
+    camera.setRotation(0, 89);
 }
 
 void Application::run()
@@ -54,8 +54,6 @@ void Application::run()
 
             updateMVPBuffer();
             updateCameraBuffer();
-            scale = timeFromTheStart;
-            updateScaleBuffer();
 
             const auto nextImageIndex = swapchain.acquireNextImageIndex(imageAcquiredSemaphore, imageAcquiredFence);
             logicalDevice.waitForFences(1, &imageAcquiredFence, true, ~0U);
@@ -138,31 +136,24 @@ void Application::loadDescriptorSets()
 {
     std::vector<vk::DescriptorPoolSize> poolSizes(2);
     poolSizes[0].setType(vk::DescriptorType::eUniformBuffer)
-        .setDescriptorCount(4);
+        .setDescriptorCount(3);
     poolSizes[1].setType(vk::DescriptorType::eCombinedImageSampler)
-        .setDescriptorCount(1);
+        .setDescriptorCount(2);
     descriptorPool.create(5, poolSizes, vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet);
 
-    std::vector<vk::DescriptorSetLayoutBinding> uniformGeomB0C1(1);   // uniform buffer, geometry shader stage, binding = 0, count = 1; usage: mvp, scale
-    uniformGeomB0C1[0].setBinding(0)
+    std::vector<vk::DescriptorSetLayoutBinding> uniformVertGeomB0C1(1);   // uniform buffer, geometry and vertex shader stages, binding = 0, count = 1; usage: mvp
+    uniformVertGeomB0C1[0].setBinding(0)
         .setDescriptorCount(1)
         .setDescriptorType(vk::DescriptorType::eUniformBuffer)
         .setPImmutableSamplers(nullptr)
-        .setStageFlags(vk::ShaderStageFlagBits::eGeometry);
-
-    std::vector<vk::DescriptorSetLayoutBinding> uniformVertexB0C1(1);   // uniform buffer, vertex stage, binding = 0, count = 1; usage: Instances
-    uniformVertexB0C1[0].setBinding(0)
-        .setDescriptorCount(1)
-        .setDescriptorType(vk::DescriptorType::eUniformBuffer)
-        .setPImmutableSamplers(nullptr)
-        .setStageFlags(vk::ShaderStageFlagBits::eVertex);
+        .setStageFlags(vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eVertex);
     
-    std::vector<vk::DescriptorSetLayoutBinding> combinedImageSamplerFragmentB0C1(1);    // usage: texture
-    combinedImageSamplerFragmentB0C1[0].setBinding(0)
+    std::vector<vk::DescriptorSetLayoutBinding> uniformVertFragB0C1(1);
+    uniformVertFragB0C1[0].setBinding(0)
         .setDescriptorCount(1)
-        .setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+        .setDescriptorType(vk::DescriptorType::eUniformBuffer)
         .setPImmutableSamplers(nullptr)
-        .setStageFlags(vk::ShaderStageFlagBits::eFragment);
+        .setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment);
 
     std::vector<vk::DescriptorSetLayoutBinding> uniformFragmentB0C1(1);               // usage: Camera
     uniformFragmentB0C1[0].setBinding(0)
@@ -171,22 +162,29 @@ void Application::loadDescriptorSets()
         .setPImmutableSamplers(nullptr)
         .setStageFlags(vk::ShaderStageFlagBits::eFragment);
 
-    descriptorPool.addDescriptorSetLayout(uniformGeomB0C1)
-        .addDescriptorSetLayout(uniformVertexB0C1)
-        .addDescriptorSetLayout(combinedImageSamplerFragmentB0C1)
-        .addDescriptorSetLayout(uniformFragmentB0C1);
+    std::vector<vk::DescriptorSetLayoutBinding> combinedImageSamplerFragmentB0C1(1);    // usage: texture, normal map
+    combinedImageSamplerFragmentB0C1[0].setBinding(0)
+        .setDescriptorCount(1)
+        .setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+        .setPImmutableSamplers(nullptr)
+        .setStageFlags(vk::ShaderStageFlagBits::eFragment);
 
-    std::vector<uint32_t> layoutIndices = {0, 3, 1, 2, 0};
+    descriptorPool.addDescriptorSetLayout(uniformVertGeomB0C1)
+        .addDescriptorSetLayout(uniformVertFragB0C1)
+        .addDescriptorSetLayout(uniformFragmentB0C1)
+        .addDescriptorSetLayout(combinedImageSamplerFragmentB0C1);
+
+    std::vector<uint32_t> layoutIndices = {mvpLayoutIndex, lampLayoutIndex, cameraLayoutIndex, planeTextureLayoutIndex, normalMapLayoutIndex};
 
     descriptorPool.allocateDescriptorSets(layoutIndices);
 }
 
-void Application::loadAndWriteDonutTexture()
+void Application::loadAndWritePlaneTexture()
 {
     const auto& logicalDevice = spk::system::System::getInstance()->getLogicalDevice();
 
-    textureHolder.addTexture(vk::Format::eR8G8B8A8Unorm, "resources/textureWALL.jpg", "Wall");
-    vk::DescriptorImageInfo imageInfo;
+    textureHolder.addTexture(vk::Format::eR8G8B8A8Unorm, "resources/brickwall.jpg", "Wall");
+    textureHolder.addTexture(vk::Format::eR8G8B8A8Unorm, "resources/brickwall_normal.jpg", "WallNormals");
 
     vk::SamplerCreateInfo samplerInfo;
     samplerInfo.setMagFilter(vk::Filter::eLinear)
@@ -204,12 +202,19 @@ void Application::loadAndWriteDonutTexture()
         .setMaxLod(10.0f)
         .setBorderColor(vk::BorderColor::eFloatOpaqueBlack)
         .setUnnormalizedCoordinates(false);
-    if(logicalDevice.createSampler(&samplerInfo, nullptr, &donutSampler) != vk::Result::eSuccess) throw std::runtime_error("Failed to create sampler!\n");
+    if(logicalDevice.createSampler(&samplerInfo, nullptr, &planeSampler) != vk::Result::eSuccess) throw std::runtime_error("Failed to create sampler!\n");
 
-    imageInfo.setImageLayout(textureHolder.getImageLayout("Wall"));
-    imageInfo.setImageView(textureHolder.getImageView("Wall"));
-    imageInfo.setSampler(donutSampler);
-    descriptorPool.writeDescriptorSetImage(textureSetIndex, 0, vk::DescriptorType::eCombinedImageSampler, imageInfo);
+    vk::DescriptorImageInfo wallImageInfo;
+    wallImageInfo.setImageLayout(textureHolder.getImageLayout("Wall"))
+        .setImageView(textureHolder.getImageView("Wall"))
+        .setSampler(planeSampler);
+    descriptorPool.writeDescriptorSetImage(textureSetIndex, 0, vk::DescriptorType::eCombinedImageSampler, wallImageInfo);
+
+    vk::DescriptorImageInfo wallNormalMapInfo;
+    wallNormalMapInfo.setImageLayout(textureHolder.getImageLayout("WallNormals"))
+        .setImageView(textureHolder.getImageView("WallNormals"))
+        .setSampler(planeSampler);
+    descriptorPool.writeDescriptorSetImage(normalMapSetIndex, 0, vk::DescriptorType::eCombinedImageSampler, wallNormalMapInfo);
 }
 
 void Application::createDepthMaps()
@@ -313,63 +318,53 @@ void Application::createRenderPass()        // and subpass dependency (l8r)
     }
 }
 
-void Application::loadMeshes(const std::string filename)
+void Application::loadMeshes()
 {
     Assimp::Importer importer;
-    const aiScene* scene = importer.ReadFile(filename, aiProcess_JoinIdenticalVertices/*aiProcess_Triangulate*/);
-    if(!scene) throw std::runtime_error("Failed to load scene.\n");
-    std::vector<vk::DescriptorSet> icingDescriptorSets = descriptorPool.getDescriptorSets({mvpSetIndex, cameraSetIndex});
-    icing.create(*(*(scene->mMeshes)), icingDescriptorSets, 1);
-    std::vector<vk::DescriptorSet> donutDescriptorSets = descriptorPool.getDescriptorSets({mvpSetIndex, cameraSetIndex, donutInstancesSetIndex, textureSetIndex, scaleSetIndex});
-    donut.create(*(*(scene->mMeshes + 1)), donutDescriptorSets, 2);
+    const aiScene* planeScene = importer.ReadFile("resources/plane.obj", aiProcess_JoinIdenticalVertices | aiProcess_Triangulate/* | aiProcess_CalcTangentSpace*/);
+    if(!planeScene) throw std::runtime_error("Failed to load scene.\n");
+    std::vector<vk::DescriptorSet> planeDescriptorSets = descriptorPool.getDescriptorSets({mvpSetIndex, lampSetIndex, cameraSetIndex, textureSetIndex, normalMapSetIndex});
+    plane.create(*(*(planeScene->mMeshes)), planeDescriptorSets, 1);
 
-    std::vector<spk::ShaderInfo> donutShaderInfos(5);
-    donutShaderInfos[0].filename = "shaders/vert.spv";
-    donutShaderInfos[0].type = vk::ShaderStageFlagBits::eVertex;
-    donutShaderInfos[1].filename = "shaders/tesc.spv";
-    donutShaderInfos[1].type = vk::ShaderStageFlagBits::eTessellationControl;
-    donutShaderInfos[2].filename = "shaders/tese.spv";
-    donutShaderInfos[2].type = vk::ShaderStageFlagBits::eTessellationEvaluation;
-    donutShaderInfos[3].filename = "shaders/frag.spv";
-    donutShaderInfos[3].type = vk::ShaderStageFlagBits::eFragment;
-    donutShaderInfos[4].filename = "shaders/geom.spv";
-    donutShaderInfos[4].type = vk::ShaderStageFlagBits::eGeometry;
-    std::vector<spk::ShaderInfo> icingShaderInfos(5);
-    icingShaderInfos[0].filename = "shaders/ntvert.spv";
-    icingShaderInfos[0].type = vk::ShaderStageFlagBits::eVertex;
-    icingShaderInfos[1].filename = "shaders/nttesc.spv";
-    icingShaderInfos[1].type = vk::ShaderStageFlagBits::eTessellationControl;
-    icingShaderInfos[2].filename = "shaders/nttese.spv";
-    icingShaderInfos[2].type = vk::ShaderStageFlagBits::eTessellationEvaluation;
-    icingShaderInfos[3].filename = "shaders/ntfrag.spv";
-    icingShaderInfos[3].type = vk::ShaderStageFlagBits::eFragment;
-    icingShaderInfos[4].filename = "shaders/ntgeom.spv";
-    icingShaderInfos[4].type = vk::ShaderStageFlagBits::eGeometry;
+    std::vector<spk::ShaderInfo> planeShaderInfos(5);
+    planeShaderInfos[0].filename = "shaders/PlaneVert.spv";
+    planeShaderInfos[0].type = vk::ShaderStageFlagBits::eVertex;
+    planeShaderInfos[1].filename = "shaders/PlaneTesc.spv";
+    planeShaderInfos[1].type = vk::ShaderStageFlagBits::eTessellationControl;
+    planeShaderInfos[2].filename = "shaders/PlaneTese.spv";
+    planeShaderInfos[2].type = vk::ShaderStageFlagBits::eTessellationEvaluation;
+    planeShaderInfos[3].filename = "shaders/PlaneFrag.spv";
+    planeShaderInfos[3].type = vk::ShaderStageFlagBits::eFragment;
+    planeShaderInfos[4].filename = "shaders/PlaneGeom.spv";
+    planeShaderInfos[4].type = vk::ShaderStageFlagBits::eGeometry;
 
-    gPassPipelineLayout = descriptorPool.getPipelineLayout({0, 3, 1, 2, 0});
-    notScaledPipelineLayout = descriptorPool.getPipelineLayout({0, 3, 1, 2, 0});
-    icingPipelineLayout = descriptorPool.getPipelineLayout({0, 3});
+    planePipelineLayout = descriptorPool.getPipelineLayout({mvpLayoutIndex, lampLayoutIndex, cameraLayoutIndex, planeTextureLayoutIndex, normalMapLayoutIndex});
 
-    spk::AdditionalInfo donutAdditionalInfo;
-    donutAdditionalInfo.layout = gPassPipelineLayout;
-    donutAdditionalInfo.renderPass = renderPass.getRenderPass();
-    donutAdditionalInfo.subpassIndex = gBufferPassID;
+    spk::AdditionalInfo planeAdditionalInfo;
+    planeAdditionalInfo.layout = planePipelineLayout;
+    planeAdditionalInfo.renderPass = renderPass.getRenderPass();
+    planeAdditionalInfo.subpassIndex = gBufferPassID;
 
-    spk::AdditionalInfo icingAdditionalInfo;
-    icingAdditionalInfo.layout = icingPipelineLayout;
-    icingAdditionalInfo.renderPass = renderPass.getRenderPass();
-    icingAdditionalInfo.subpassIndex = gBufferPassID;
+    plane.createPipeline(0, planeShaderInfos, {windowWidth, windowHeight}, planeAdditionalInfo);
 
-    spk::AdditionalInfo notScaledAdditionalInfo;
-    notScaledAdditionalInfo.layout = notScaledPipelineLayout;
-    notScaledAdditionalInfo.renderPass = renderPass.getRenderPass();
-    notScaledAdditionalInfo.subpassIndex = gBufferPassID;
+    const aiScene* lampScene = importer.ReadFile("resources/lamp.obj", aiProcess_JoinIdenticalVertices | aiProcess_Triangulate);
+    if(!lampScene) throw std::runtime_error("Failed to load scene.\n");
+    lamp.create(*(*(lampScene->mMeshes)), {}, 1);
 
-    donut.createPipeline(0, donutShaderInfos, {windowWidth, windowHeight}, donutAdditionalInfo);
-    auto notScaledDonutShaderInfos = donutShaderInfos;
-    notScaledDonutShaderInfos[4].filename = "shaders/nsgeom.spv";
-    donut.createPipeline(1, notScaledDonutShaderInfos, {windowWidth, windowHeight}, notScaledAdditionalInfo);
-    icing.createPipeline(0, icingShaderInfos, {windowWidth, windowHeight}, icingAdditionalInfo);
+    std::vector<spk::ShaderInfo> lampShaderInfos(2);
+    lampShaderInfos[0].filename = "shaders/LampVert.spv";
+    lampShaderInfos[0].type = vk::ShaderStageFlagBits::eVertex;
+    lampShaderInfos[1].filename = "shaders/LampFrag.spv";
+    lampShaderInfos[1].type = vk::ShaderStageFlagBits::eFragment;
+
+    lampPipelineLayout = descriptorPool.getPipelineLayout({mvpLayoutIndex, lampLayoutIndex});
+
+    spk::AdditionalInfo lampAdditionalInfo;
+    lampAdditionalInfo.layout = lampPipelineLayout;
+    lampAdditionalInfo.renderPass = renderPass.getRenderPass();
+    lampAdditionalInfo.subpassIndex = gBufferPassID;
+
+    lamp.createPipeline(0, lampShaderInfos, {windowWidth, windowHeight}, lampAdditionalInfo);
 }
 
 void Application::createQueryPool()
@@ -392,16 +387,12 @@ void Application::recordRenderPass()
         const auto& framebuffer = renderPass.getFramebuffer(currentFramebufferIndex);
         gBufferPass.bindCommandBuffer(currentFramebufferIndex)
             .beginRecording(renderPass.getRenderPass(), framebuffer);
-        donut.bindDescriptorSets(gBufferPass, 0)
+        plane.bindDescriptorSets(gBufferPass, 0)
             .bindPipeline(gBufferPass, 0)
             .bindIndexBuffer(gBufferPass)
             .bindVertexBuffer(gBufferPass)
-            .drawIndexed(gBufferPass, 2)
-            .bindPipeline(gBufferPass, 1)
-            .bindIndexBuffer(gBufferPass)
-            .bindVertexBuffer(gBufferPass)
-            .drawIndexed(gBufferPass, 2);
-        icing.bindPipeline(gBufferPass, 0)
+            .drawIndexed(gBufferPass);
+        lamp.bindPipeline(gBufferPass, 0)
             .bindIndexBuffer(gBufferPass)
             .bindVertexBuffer(gBufferPass)
             .drawIndexed(gBufferPass);
@@ -471,12 +462,10 @@ void Application::createDescriptorBuffers()
 {
     mvpBuffer.create(sizeof(MVP), vk::BufferUsageFlagBits::eUniformBuffer, false, false);
     cameraBuffer.create(sizeof(glm::vec4) * 2, vk::BufferUsageFlagBits::eUniformBuffer, false, false);
-    donutInstancesBuffer.create(sizeof(glm::vec4) * 2, vk::BufferUsageFlagBits::eUniformBuffer, false, false);
-    scaleBuffer.create(sizeof(float), vk::BufferUsageFlagBits::eUniformBuffer, false, false);
+    lampBuffer.create(sizeof(glm::vec4) * MAX_LAMPS_ON_SCENE, vk::BufferUsageFlagBits::eUniformBuffer, false, false);
     mvpBuffer.bindMemory();
     cameraBuffer.bindMemory();
-    donutInstancesBuffer.bindMemory();
-    scaleBuffer.bindMemory();
+    lampBuffer.bindMemory();
 }
 
 void Application::updateMVPDescriptorSet()
@@ -491,6 +480,18 @@ void Application::updateMVPDescriptorSet()
     descriptorPool.writeDescriptorSetBuffer(mvpSetIndex, 0, vk::DescriptorType::eUniformBuffer, info);
 }
 
+void Application::updateLampDescriptorSet()
+{
+    updateLampBuffer();
+
+    vk::DescriptorBufferInfo info;
+    info.setBuffer(lampBuffer.getBuffer())
+        .setOffset(0)
+        .setRange(VK_WHOLE_SIZE);
+    
+    descriptorPool.writeDescriptorSetBuffer(lampSetIndex, 0, vk::DescriptorType::eUniformBuffer, info);
+}
+
 void Application::updateCameraDescriptorSet()
 {
     updateCameraBuffer();
@@ -503,33 +504,14 @@ void Application::updateCameraDescriptorSet()
     descriptorPool.writeDescriptorSetBuffer(cameraSetIndex, 0, vk::DescriptorType::eUniformBuffer, info);
 }
 
-void Application::updateDonutInstancesDescriptorSet()
-{
-    updateDonutInstancesBuffer();
-
-    vk::DescriptorBufferInfo info;
-    info.setBuffer(donutInstancesBuffer.getBuffer())
-        .setOffset(0)
-        .setRange(VK_WHOLE_SIZE);
-
-    descriptorPool.writeDescriptorSetBuffer(donutInstancesSetIndex, 0, vk::DescriptorType::eUniformBuffer, info);
-}
-
-void Application::updateScaleDescriptorSet()
-{
-    updateScaleBuffer();
-
-    vk::DescriptorBufferInfo info;
-    info.setBuffer(scaleBuffer.getBuffer())
-        .setOffset(0)
-        .setRange(VK_WHOLE_SIZE);
-
-    descriptorPool.writeDescriptorSetBuffer(scaleSetIndex, 0, vk::DescriptorType::eUniformBuffer, info);
-}
-
 void Application::updateMVPBuffer()
 {
     mvpBuffer.updateCPUAccessible(reinterpret_cast<const void*>(&mvp));
+}
+
+void Application::updateLampBuffer()
+{
+    lampBuffer.updateCPUAccessible(reinterpret_cast<const void*>(lampPositionsAndPowers.data()));
 }
 
 void Application::updateCameraBuffer()
@@ -540,35 +522,22 @@ void Application::updateCameraBuffer()
     cameraBuffer.updateCPUAccessible(reinterpret_cast<const void*>(data.data()));
 }
 
-void Application::updateDonutInstancesBuffer()
-{
-    donutInstancesBuffer.updateCPUAccessible(reinterpret_cast<const void*>(donutInstances.data()));
-}
-
-void Application::updateScaleBuffer()
-{
-    scaleBuffer.updateCPUAccessible(&scale);
-}
 
 void Application::destroy()
 {
     const auto& logicalDevice = spk::system::System::getInstance()->getLogicalDevice();
-    if(gPassPipelineLayout)
+    if(planePipelineLayout)
     {
-        descriptorPool.destroyPipelineLayout(gPassPipelineLayout);
+        descriptorPool.destroyPipelineLayout(planePipelineLayout);
     }
-    if(notScaledPipelineLayout)
+    if(lampPipelineLayout)
     {
-        descriptorPool.destroyPipelineLayout(notScaledPipelineLayout);
+        descriptorPool.destroyPipelineLayout(lampPipelineLayout);
     }
-    if(icingPipelineLayout)
+    if(planeSampler)
     {
-        descriptorPool.destroyPipelineLayout(icingPipelineLayout);
-    }
-    if(donutSampler)
-    {
-        logicalDevice.destroySampler(donutSampler, nullptr);
-        donutSampler = vk::Sampler();
+        logicalDevice.destroySampler(planeSampler, nullptr);
+        planeSampler = vk::Sampler();
     }
     if(imageAcquiredFence)
     {

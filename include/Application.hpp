@@ -19,6 +19,8 @@ struct MVP
     glm::mat4 proj;
 };
 
+const unsigned int MAX_LAMPS_ON_SCENE = 1;
+
 class Application
 {
 public:
@@ -33,24 +35,22 @@ private:
     void createSwapchain();
     void loadDescriptorSets();
     void createDescriptorBuffers();
-    void loadAndWriteDonutTexture();
+    void loadAndWritePlaneTexture();
     void createDepthMaps();
     //void createDepthPrepass();
     void createGBufferPass();
     void createRenderPass();        // and subpass dependency (l8r)
-    void loadMeshes(const std::string filename);
+    void loadMeshes();
     void createQueryPool();
     void recordRenderPass();
 
     void processInput(const float elapsedTime);
     void updateMVPDescriptorSet();
+    void updateLampDescriptorSet();
     void updateCameraDescriptorSet();
-    void updateDonutInstancesDescriptorSet();
-    void updateScaleDescriptorSet();
     void updateMVPBuffer();
+    void updateLampBuffer();
     void updateCameraBuffer();
-    void updateDonutInstancesBuffer();
-    void updateScaleBuffer();
 
     const unsigned int windowWidth = 1024;
     const unsigned int windowHeight = 720;
@@ -58,46 +58,45 @@ private:
     const double fps = 60;
     const double frameTime = 1 / fps;
 
+    std::vector<glm::vec4> lampPositionsAndPowers;
+
     MVP mvp;
     Camera camera;
-    std::vector<glm::vec4> donutInstances = {{0, 0, 0, 0}, {2, 2, 2, 0}};
     spk::Buffer mvpBuffer;
+    spk::Buffer lampBuffer;
     spk::Buffer cameraBuffer;
-    spk::Buffer donutInstancesBuffer;
-    spk::Buffer scaleBuffer;
+
     const uint32_t mvpSetIndex = 0;
-    const uint32_t cameraSetIndex = 1;
-    const uint32_t donutInstancesSetIndex = 2;
+    const uint32_t lampSetIndex = 1;
+    const uint32_t cameraSetIndex = 2;
     const uint32_t textureSetIndex = 3;
-    const uint32_t scaleSetIndex = 4;
+    const uint32_t normalMapSetIndex = 4;
+
+    const uint32_t mvpLayoutIndex = 0;
+    const uint32_t lampLayoutIndex = 1;
+    const uint32_t cameraLayoutIndex = 2;
+    const uint32_t planeTextureLayoutIndex = 3;
+    const uint32_t normalMapLayoutIndex = 3;
 
     const uint32_t gBufferPassID = 0;
-    vk::Format swapchainImageFormat = vk::Format::eR8G8B8A8Snorm;
+    vk::Format swapchainImageFormat = vk::Format::eR8G8B8Unorm;
     vk::Format depthMapFormat;
-
-    float scale = 1;
     
     GLFWwindow* window;
     vk::SurfaceKHR surface;
     spk::Swapchain swapchain;
     TextureHolder textureHolder;
     spk::DescriptorPool descriptorPool;
-    //spk::ShaderSet depthPrepassShaders;
-    spk::ShaderSet gPassShaders;
-    vk::PipelineLayout gPassPipelineLayout;
-    vk::PipelineLayout notScaledPipelineLayout;
-    vk::PipelineLayout icingPipelineLayout;
-    spk::Pipeline gPassPipeline;
+    vk::PipelineLayout planePipelineLayout;
+    vk::PipelineLayout lampPipelineLayout;
     std::vector<spk::Image> depthMaps;
     std::vector<spk::ImageView> depthMapImageViews;
-    //spk::Subpass depthPrepass;
     spk::Subpass gBufferPass;
-    //vk::SubpassDependency depthToGBufferDependency;
     spk::RenderPass renderPass;
-    vk::Sampler donutSampler;
+    vk::Sampler planeSampler;
     vk::QueryPool queryPool;
-    BasicMesh donut;
-    NotTexturedMesh icing;
+    BasicMesh plane;
+    NotTexturedMesh lamp;
 
     vk::Semaphore imageAcquiredSemaphore;
     vk::Semaphore imageRenderedSemaphore;
