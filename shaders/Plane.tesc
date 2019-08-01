@@ -2,7 +2,7 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_EXT_tessellation_shader : enable
 
-layout(vertices = 4) out;
+layout(vertices = 3) out;
 
 layout(location = 0) in VertexData
 {
@@ -22,12 +22,11 @@ void main()
 {
     if(gl_InvocationID == 0)
     {
-        gl_TessLevelInner[0] = 4.0f;
-        gl_TessLevelInner[1] = 4.0f;
-        gl_TessLevelOuter[0] = 4.0f;
-        gl_TessLevelOuter[1] = 4.0f;
-        gl_TessLevelOuter[2] = 4.0f;
-        gl_TessLevelOuter[3] = 4.0f;
+        gl_TessLevelInner[0] = 1.0f;
+
+        gl_TessLevelOuter[0] = 1.0f;
+        gl_TessLevelOuter[1] = 1.0f;
+        gl_TessLevelOuter[2] = 1.0f;
     }
     vertexDataOut[gl_InvocationID].coords = vertexData[gl_InvocationID].coords;
     vertexDataOut[gl_InvocationID].normal = vertexData[gl_InvocationID].normal;

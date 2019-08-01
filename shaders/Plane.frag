@@ -6,13 +6,22 @@ layout(location = 0) in VertexData
 {
     vec3 coords;
     vec3 normal;
+    vec2 uv;
 } vertexData;
 
-layout(set = 1, binding = 0) uniform Camera
+layout(set = 1, binding = 0) uniform Lamps
+{
+    vec4 posAndPower;
+} lamps[1];
+
+layout(set = 2, binding = 0) uniform Camera
 {
     vec3 pos;
     vec3 viewDir;
 } camera;
+
+layout(set = 3, binding = 0) uniform sampler2D txt;
+layout(set = 4, binding = 0) uniform sampler2D normalMap;
 
 layout(location = 0) out vec4 outColor;
 
@@ -67,20 +76,21 @@ void main(void)
 
     directional.direction = vec3(0, 0, -1);
 
-    light.emitterPosition = vec3(3, 0, 0);
-    light.power = 0.5;
+    light.emitterPosition = lamps[0].posAndPower.xyz;
+    light.power = lamps[0].posAndPower.w;
     light.attenuationConstant = 1.0f;
     light.attenuationLinear = 0.09f;
     light.attenuationQuadratic = 0.032f;
 
-    vec3 norm = normalize(vertexData.normal);
+    //vec3 norm = normalize(vertexData.normal);
+    vec3 norm = normalize(texture(normalMap, vertexData.uv).xyz);
     vec3 fragToLight = normalize(light.emitterPosition - vertexData.coords);
     vec3 fragToCamera = normalize(camera.pos - vertexData.coords);
 
     float dist = distance(light.emitterPosition, vertexData.coords);
     float attenuation = 1.0 / (light.attenuationConstant + light.attenuationLinear * dist + light.attenuationQuadratic * dist * dist);
 
-    vec4 textureColor = vec4(1, 0.5, 0.55, 1);
+    vec4 textureColor = texture(txt, vertexData.uv);
     vec4 ambientLight = vec4(0.1, 0.1, 0.1, 1) * textureColor;
     vec4 diffuseLight = calculateDiffuse(textureColor, norm, fragToLight, light.power);
     vec4 specularLight = calculateSpecular(textureColor, norm, fragToLight, fragToCamera, 32, light.power);
@@ -98,8 +108,6 @@ void main(void)
         flashlightLight = (flashlightDiffuse + flashlightSpecular) * flashlightAttenuation * flashlightIntensity;
     }
 
-    outColor = (diffuseLight + ambientLight + specularLight) * attenuation + directionalLight + flashlightLight;
-    //outColor.w = 1;
-    //outColor = vec4(1, 1, 1, 1) * gl_FragCoord.z;
+    outColor = (diffuseLight + ambientLight + specularLight) * attenuation + directionalLight/* + flashlightLight*/;
     //outColor = vec4(1, 1, 1, 1);
 }
