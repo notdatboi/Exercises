@@ -2,7 +2,7 @@
 
 Application::Application() : lampPositionsAndPowers(MAX_LAMPS_ON_SCENE)
 {
-    lampPositionsAndPowers[0] = {0, 0, 0.5, 0.9};
+    lampPositionsAndPowers[0] = {0, 0.5, 0, 1};
     mvp.model = glm::mat4(1);
     mvp.proj = glm::perspective(glm::radians<float>(60), windowWidth / (float)windowHeight, 0.0001f, 10.f);
     mvp.proj[1][1] = -mvp.proj[1][1];
@@ -23,7 +23,7 @@ Application::Application() : lampPositionsAndPowers(MAX_LAMPS_ON_SCENE)
     createQueryPool();
     recordRenderPass();
 
-    camera.setPosition({0, 0, 1});
+    camera.setPosition({0, 1, 0});
     camera.setRotation(0, 89);
 }
 
@@ -321,7 +321,7 @@ void Application::createRenderPass()        // and subpass dependency (l8r)
 void Application::loadMeshes()
 {
     Assimp::Importer importer;
-    const aiScene* planeScene = importer.ReadFile("resources/plane.obj", aiProcess_JoinIdenticalVertices | aiProcess_Triangulate/* | aiProcess_CalcTangentSpace*/);
+    const aiScene* planeScene = importer.ReadFile("resources/plane.obj", aiProcess_JoinIdenticalVertices | aiProcess_Triangulate | aiProcess_CalcTangentSpace);
     if(!planeScene) throw std::runtime_error("Failed to load scene.\n");
     std::vector<vk::DescriptorSet> planeDescriptorSets = descriptorPool.getDescriptorSets({mvpSetIndex, lampSetIndex, cameraSetIndex, textureSetIndex, normalMapSetIndex});
     plane.create(*(*(planeScene->mMeshes)), planeDescriptorSets, 1);
@@ -427,7 +427,7 @@ void Application::processInput(const float elapsedTime)
     prevCursorY = cursorY;
 
     const auto direction = camera.getNormalizedDirection();
-    static const glm::vec3 up(0, 0, 1);
+    static const glm::vec3 up(0, 1, 0);
     int WState = glfwGetKey(window, GLFW_KEY_W);
     int AState = glfwGetKey(window, GLFW_KEY_A);
     int SState = glfwGetKey(window, GLFW_KEY_S);

@@ -49,7 +49,7 @@ const glm::vec3 Camera::getNormalizedDirection() const
 {
     glm::vec3 direction;
     direction.x = glm::cos(glm::radians(pitch)) * glm::cos(glm::radians(yaw));
-    direction.y = -glm::cos(glm::radians(pitch)) * glm::sin(glm::radians(yaw));
-    direction.z = -glm::sin(glm::radians(pitch));
+    direction.y = -glm::sin(glm::radians(pitch));
+    direction.z = glm::cos(glm::radians(pitch)) * glm::sin(glm::radians(yaw));
     return glm::normalize(direction);
 }
