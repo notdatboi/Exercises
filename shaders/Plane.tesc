@@ -7,6 +7,8 @@ layout(vertices = 3) out;
 layout(location = 0) in VertexData
 {
     vec3 coords;
+    vec3 tangent;
+    vec3 bitangent;
     vec3 normal;
     vec2 uv;
 } vertexData[];
@@ -14,6 +16,8 @@ layout(location = 0) in VertexData
 layout(location = 0) out VertexData
 {
     vec3 coords;
+    vec3 tangent;
+    vec3 bitangent;
     vec3 normal;
     vec2 uv;
 } vertexDataOut[];
@@ -29,6 +33,8 @@ void main()
         gl_TessLevelOuter[2] = 1.0f;
     }
     vertexDataOut[gl_InvocationID].coords = vertexData[gl_InvocationID].coords;
+    vertexDataOut[gl_InvocationID].tangent = vertexData[gl_InvocationID].tangent;
+    vertexDataOut[gl_InvocationID].bitangent = vertexData[gl_InvocationID].bitangent;
     vertexDataOut[gl_InvocationID].normal = vertexData[gl_InvocationID].normal;
     vertexDataOut[gl_InvocationID].uv = vertexData[gl_InvocationID].uv;
     gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;

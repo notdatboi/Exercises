@@ -5,7 +5,8 @@
 layout(location = 0) in VertexData
 {
     vec3 coords;
-    vec3 normal;
+    //vec3 normal;
+    mat3 TBN;
     vec2 uv;
 } vertexData;
 
@@ -71,10 +72,10 @@ vec4 calculateDirectional(vec4 textureColor, vec3 normal, vec3 direction, float 
 
 void main(void)
 {
-    flashlight.innerCutoffCos = cos(radians(12.0f));
-    flashlight.outerCutoffCos = cos(radians(20.0f));
+//    flashlight.innerCutoffCos = cos(radians(12.0f));
+//    flashlight.outerCutoffCos = cos(radians(20.0f));
 
-    directional.direction = vec3(0, 0, -1);
+//    directional.direction = vec3(0, -1, 0);
 
     light.emitterPosition = lamps[0].posAndPower.xyz;
     light.power = lamps[0].posAndPower.w;
@@ -82,8 +83,10 @@ void main(void)
     light.attenuationLinear = 0.09f;
     light.attenuationQuadratic = 0.032f;
 
-    //vec3 norm = normalize(vertexData.normal);
-    vec3 norm = normalize(texture(normalMap, vertexData.uv).xyz);
+    //vec3 norm = normalize(vertexData.TBN[2]);
+    vec3 normalMapSample = texture(normalMap, vertexData.uv).xyz;
+    vec3 norm = normalize(normalMapSample * 2 - 1.0f);
+    norm = normalize(vertexData.TBN * norm);
     vec3 fragToLight = normalize(light.emitterPosition - vertexData.coords);
     vec3 fragToCamera = normalize(camera.pos - vertexData.coords);
 
@@ -94,20 +97,30 @@ void main(void)
     vec4 ambientLight = vec4(0.1, 0.1, 0.1, 1) * textureColor;
     vec4 diffuseLight = calculateDiffuse(textureColor, norm, fragToLight, light.power);
     vec4 specularLight = calculateSpecular(textureColor, norm, fragToLight, fragToCamera, 32, light.power);
-    vec4 directionalLight = calculateDirectional(textureColor, norm, directional.direction, 0.1);
+//    vec4 directionalLight = calculateDirectional(textureColor, norm, directional.direction, 0.1);
 
-    float cosineFlashlight = max(dot(normalize(-camera.viewDir), fragToCamera), 0.0);
-    vec4 flashlightLight = vec4(0, 0, 0, 0);
-    float flashlightIntensity = clamp((cosineFlashlight - flashlight.outerCutoffCos) / (flashlight.innerCutoffCos - flashlight.outerCutoffCos), 0.0, 1.0);
-    if(flashlightIntensity > 0)
-    {
-        vec4 flashlightDiffuse = calculateDiffuse(textureColor, norm, fragToCamera, 0.2);
-        vec4 flashlightSpecular = calculateSpecular(textureColor, norm, fragToCamera, fragToCamera, 32, 0.2);
-        float distToFlashlight = distance(vertexData.coords, camera.pos);
-        float flashlightAttenuation = 1.0 / (light.attenuationConstant + light.attenuationLinear * distToFlashlight + light.attenuationQuadratic * distToFlashlight * distToFlashlight);
-        flashlightLight = (flashlightDiffuse + flashlightSpecular) * flashlightAttenuation * flashlightIntensity;
-    }
+//    float cosineFlashlight = max(dot(normalize(-camera.viewDir), fragToCamera), 0.0);
+//    vec4 flashlightLight = vec4(0, 0, 0, 0);
+//    float flashlightIntensity = clamp((cosineFlashlight - flashlight.outerCutoffCos) / (flashlight.innerCutoffCos - flashlight.outerCutoffCos), 0.0, 1.0);
+//    if(flashlightIntensity > 0)
+//    {
+//        vec4 flashlightDiffuse = calculateDiffuse(textureColor, norm, fragToCamera, 0.2);
+//        vec4 flashlightSpecular = calculateSpecular(textureColor, norm, fragToCamera, fragToCamera, 32, 0.2);
+//        float distToFlashlight = distance(vertexData.coords, camera.pos);
+//        float flashlightAttenuation = 1.0 / (light.attenuationConstant + light.attenuationLinear * distToFlashlight + light.attenuationQuadratic * distToFlashlight * distToFlashlight);
+//        flashlightLight = (flashlightDiffuse + flashlightSpecular) * flashlightAttenuation * flashlightIntensity;
+//    }
 
-    outColor = (diffuseLight + ambientLight + specularLight) * attenuation + directionalLight/* + flashlightLight*/;
-    //outColor = vec4(1, 1, 1, 1);
+    outColor = (diffuseLight + ambientLight + specularLight) * attenuation /*+ directionalLight/* + flashlightLight*/;
+//    outColor = vec4(normalize(texture(normalMap, vertexData.uv).rgb), 1.0f);
+//    vec3 interpolatedNorm = normalize(vertexData.normal);
+//    if(distance(interpolatedNorm, norm) > 0.3) outColor = vec4(1, 1, 1, 1);
+//    if(distance(norm, normalize(vec3(0.16, 0.18, 0.32))) > 0.3)
+//    {
+//        outColor = vec4(1, 1, 1, 1);
+//    }
+//    outColor = vec4(0, 0, 0, 1);
+//    if(pass1) outColor.r = 1;
+//    if(pass2) outColor.g = 1;
+//    if(pass3) outColor.b = 1;
 }
