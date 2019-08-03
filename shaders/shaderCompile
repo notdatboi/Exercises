@@ -1,8 +1,0 @@
-glslangValidator -V Plane.vert -o PlaneVert.spv
-glslangValidator -V Plane.frag -o PlaneFrag.spv
-glslangValidator -V Plane.tesc -o PlaneTesc.spv
-glslangValidator -V Plane.tese -o PlaneTese.spv
-glslangValidator -V Plane.geom -o PlaneGeom.spv
-
-glslangValidator -V Lamp.vert -o LampVert.spv
-glslangValidator -V Lamp.frag -o LampFrag.spv
