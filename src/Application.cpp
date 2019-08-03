@@ -326,17 +326,18 @@ void Application::loadMeshes()
     std::vector<vk::DescriptorSet> planeDescriptorSets = descriptorPool.getDescriptorSets({mvpSetIndex, lampSetIndex, cameraSetIndex, textureSetIndex, normalMapSetIndex});
     plane.create(*(*(planeScene->mMeshes)), planeDescriptorSets, 1);
 
-    std::vector<spk::ShaderInfo> planeShaderInfos(5);
-    planeShaderInfos[0].filename = "shaders/PlaneVert.spv";
-    planeShaderInfos[0].type = vk::ShaderStageFlagBits::eVertex;
-    planeShaderInfos[1].filename = "shaders/PlaneTesc.spv";
-    planeShaderInfos[1].type = vk::ShaderStageFlagBits::eTessellationControl;
-    planeShaderInfos[2].filename = "shaders/PlaneTese.spv";
-    planeShaderInfos[2].type = vk::ShaderStageFlagBits::eTessellationEvaluation;
-    planeShaderInfos[3].filename = "shaders/PlaneFrag.spv";
-    planeShaderInfos[3].type = vk::ShaderStageFlagBits::eFragment;
-    planeShaderInfos[4].filename = "shaders/PlaneGeom.spv";
-    planeShaderInfos[4].type = vk::ShaderStageFlagBits::eGeometry;
+    //std::vector<spk::ShaderInfo> planeShaderInfos(5);
+    //planeShaderInfos[0].filename = "shaders/PlaneVert.spv";
+    //planeShaderInfos[0].type = vk::ShaderStageFlagBits::eVertex;
+    //planeShaderInfos[1].filename = "shaders/PlaneTesc.spv";
+    //planeShaderInfos[1].type = vk::ShaderStageFlagBits::eTessellationControl;
+    //planeShaderInfos[2].filename = "shaders/PlaneTese.spv";
+    //planeShaderInfos[2].type = vk::ShaderStageFlagBits::eTessellationEvaluation;
+    //planeShaderInfos[3].filename = "shaders/PlaneFrag.spv";
+    //planeShaderInfos[3].type = vk::ShaderStageFlagBits::eFragment;
+    //planeShaderInfos[4].filename = "shaders/PlaneGeom.spv";
+    //planeShaderInfos[4].type = vk::ShaderStageFlagBits::eGeometry;
+    std::vector<std::string> planeShaderInfos{"shaders/Plane.vert", "shaders/Plane.tesc", "shaders/Plane.tese", "shaders/Plane.geom", "shaders/Plane.frag"};
 
     planePipelineLayout = descriptorPool.getPipelineLayout({mvpLayoutIndex, lampLayoutIndex, cameraLayoutIndex, planeTextureLayoutIndex, normalMapLayoutIndex});
 
@@ -351,11 +352,12 @@ void Application::loadMeshes()
     if(!lampScene) throw std::runtime_error("Failed to load scene.\n");
     lamp.create(*(*(lampScene->mMeshes)), {}, 1);
 
-    std::vector<spk::ShaderInfo> lampShaderInfos(2);
-    lampShaderInfos[0].filename = "shaders/LampVert.spv";
-    lampShaderInfos[0].type = vk::ShaderStageFlagBits::eVertex;
-    lampShaderInfos[1].filename = "shaders/LampFrag.spv";
-    lampShaderInfos[1].type = vk::ShaderStageFlagBits::eFragment;
+    //std::vector<spk::ShaderInfo> lampShaderInfos(2);
+    //lampShaderInfos[0].filename = "shaders/LampVert.spv";
+    //lampShaderInfos[0].type = vk::ShaderStageFlagBits::eVertex;
+    //lampShaderInfos[1].filename = "shaders/LampFrag.spv";
+    //lampShaderInfos[1].type = vk::ShaderStageFlagBits::eFragment;
+    std::vector<std::string> lampShaderInfos{"shaders/Lamp.vert", "shaders/Lamp.frag"};
 
     lampPipelineLayout = descriptorPool.getPipelineLayout({mvpLayoutIndex, lampLayoutIndex});
 

@@ -227,7 +227,7 @@ const Mesh& Mesh::drawIndexed(spk::Subpass& subpass, const uint32_t instanceCoun
     return *this;
 }
 
-void Mesh::loadShaders(const uint32_t shaderSetIndex, const std::vector<spk::ShaderInfo> shaderInfos)
+void Mesh::loadShaders(const uint32_t shaderSetIndex, const std::vector</*spk::ShaderInfo*/std::string> shaderInfos)
 {
     if(shaderSetIndex >= shaderSets.size())
     {

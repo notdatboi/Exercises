@@ -1,6 +1,6 @@
 #include<NotTexturedMesh.hpp>
 
-void NotTexturedMesh::createPipeline(const uint32_t pipelineIndex, const std::vector<spk::ShaderInfo> shaderInfos, const vk::Extent2D extent, const spk::AdditionalInfo& info)
+void NotTexturedMesh::createPipeline(const uint32_t pipelineIndex, const std::vector<std::string/*spk::ShaderInfo*/> shaderInfos, const vk::Extent2D extent, const spk::AdditionalInfo& info)
 {
     if(pipelineIndex >= shaderSets.size())
     {
