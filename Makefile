@@ -1,4 +1,4 @@
-LIBS= -lvulkan -lglfw -lassimp 
+LIBS= -lvulkan -lglfw -lassimp -lglslang -lSPIRV
 CC=g++ -std=c++17 -I./include -I../Vulkan-wrapper/include -I./StbLibrary
 BIN=a.out
 SOURCES=$(wildcard src/*.cpp)
