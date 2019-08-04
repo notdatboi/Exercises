@@ -20,7 +20,7 @@ public:
     void create(const aiMesh& mesh,
         const std::vector<vk::DescriptorSet>& descriptorSets,
         const uint32_t pipelineCount);
-    virtual void createPipeline(const uint32_t pipelineIndex, const std::vector</*spk::ShaderInfo*/std::string> shaderInfos, const vk::Extent2D extent, const spk::AdditionalInfo& info) = 0;
+    virtual void createPipeline(const uint32_t pipelineIndex, const std::vector</*spk::ShaderInfo*/std::string> shaderInfos, const vk::Extent2D extent, const vk::PipelineLayout layout, const vk::RenderPass renderPass, const uint32_t subpassIndex) = 0;
     const Mesh& bindVertexBuffer(spk::Subpass& subpass) const;
     const Mesh& bindIndexBuffer(spk::Subpass& subpass) const;
     const Mesh& bindPipeline(spk::Subpass& subpass, const uint32_t index) const;

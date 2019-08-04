@@ -341,12 +341,7 @@ void Application::loadMeshes()
 
     planePipelineLayout = descriptorPool.getPipelineLayout({mvpLayoutIndex, lampLayoutIndex, cameraLayoutIndex, planeTextureLayoutIndex, normalMapLayoutIndex});
 
-    spk::AdditionalInfo planeAdditionalInfo;
-    planeAdditionalInfo.layout = planePipelineLayout;
-    planeAdditionalInfo.renderPass = renderPass.getRenderPass();
-    planeAdditionalInfo.subpassIndex = gBufferPassID;
-
-    plane.createPipeline(0, planeShaderInfos, {windowWidth, windowHeight}, planeAdditionalInfo);
+    plane.createPipeline(0, planeShaderInfos, {windowWidth, windowHeight}, planePipelineLayout, renderPass.getRenderPass(), gBufferPassID);
 
     const aiScene* lampScene = importer.ReadFile("resources/lamp.obj", aiProcess_JoinIdenticalVertices | aiProcess_Triangulate);
     if(!lampScene) throw std::runtime_error("Failed to load scene.\n");
@@ -361,12 +356,7 @@ void Application::loadMeshes()
 
     lampPipelineLayout = descriptorPool.getPipelineLayout({mvpLayoutIndex, lampLayoutIndex});
 
-    spk::AdditionalInfo lampAdditionalInfo;
-    lampAdditionalInfo.layout = lampPipelineLayout;
-    lampAdditionalInfo.renderPass = renderPass.getRenderPass();
-    lampAdditionalInfo.subpassIndex = gBufferPassID;
-
-    lamp.createPipeline(0, lampShaderInfos, {windowWidth, windowHeight}, lampAdditionalInfo);
+    lamp.createPipeline(0, lampShaderInfos, {windowWidth, windowHeight}, lampPipelineLayout, renderPass.getRenderPass(), gBufferPassID);
 }
 
 void Application::createQueryPool()
