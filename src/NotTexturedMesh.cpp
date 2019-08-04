@@ -1,6 +1,6 @@
 #include<NotTexturedMesh.hpp>
 
-void NotTexturedMesh::createPipeline(const uint32_t pipelineIndex, const std::vector<std::string/*spk::ShaderInfo*/> shaderInfos, const vk::Extent2D extent, const spk::AdditionalInfo& info)
+void NotTexturedMesh::createPipeline(const uint32_t pipelineIndex, const std::vector<std::string/*spk::ShaderInfo*/> shaderInfos, const vk::Extent2D extent, const vk::PipelineLayout layout, const vk::RenderPass renderPass, const uint32_t subpassIndex)
 {
     if(pipelineIndex >= shaderSets.size())
     {
@@ -8,26 +8,19 @@ void NotTexturedMesh::createPipeline(const uint32_t pipelineIndex, const std::ve
     }
     loadShaders(pipelineIndex, shaderInfos);
 
-    spk::ShaderStages shaderStages;
-    shaderStages.stages = shaderSets[pipelineIndex].getShaderStages();
+    pipelines[pipelineIndex].addShaderStages(shaderSets[pipelineIndex].getShaderStages());
 
     vk::VertexInputBindingDescription bindingDesc;
     bindingDesc.setBinding(0)
         .setInputRate(vk::VertexInputRate::eVertex)
         .setStride(stride);
+    pipelines[pipelineIndex].addVertexInputState({bindingDesc}, vertexDescription.getAttributeDescriptions());
 
-    spk::VertexInputState vertexInputState;
-    vertexInputState.bindingDescriptions = {bindingDesc};
-    vertexInputState.attributeDescriptions = vertexDescription.getAttributeDescriptions();
-
-    spk::InputAssemblyState assemblyState;
-    assemblyState.enablePrimitiveRestart = false;
-    assemblyState.topology = vk::PrimitiveTopology::eTriangleList;
+    pipelines[pipelineIndex].addInputAssemblyState(vk::PrimitiveTopology::eTriangleList, false);
 
     vk::Rect2D scissor;
     scissor.setOffset({0, 0})
         .setExtent({extent.width, extent.height});
-
     vk::Viewport viewport;
     viewport.setX(0)
         .setY(0)
@@ -35,43 +28,16 @@ void NotTexturedMesh::createPipeline(const uint32_t pipelineIndex, const std::ve
         .setHeight(extent.height)
         .setMinDepth(0.0f)
         .setMaxDepth(1.0f);
-
-    spk::TessellationState tessellationState;
-
-    spk::ViewportState viewportState;
-    viewportState.scissor = scissor;
-    viewportState.viewport = viewport;
-
-    spk::RasterizationState rasterizationState;
-    rasterizationState.cullMode = vk::CullModeFlagBits::eBack;
-    rasterizationState.enableDepthClamp = false;
-    rasterizationState.frontFace = vk::FrontFace::eCounterClockwise;
-
-    spk::MultisampleState multisampleState;
-    multisampleState.rasterizationSampleCount = vk::SampleCountFlagBits::e1;
-
-    spk::DepthStencilState depthStencilState;
-    depthStencilState.enableDepthTest = true;
-    depthStencilState.depthCompareOp = vk::CompareOp::eLess;
-    depthStencilState.writeTestResults = true;
+    pipelines[pipelineIndex].addViewportState({viewport}, {scissor})
+        .addRasterizationState(false, false, vk::PolygonMode::eLine, vk::CullModeFlagBits::eBack, vk::FrontFace::eCounterClockwise, false, 0, 0, 0, 1)
+        .addDepthStencilState(true, true, vk::CompareOp::eLess, false, false, vk::StencilOpState(), vk::StencilOpState(), 0, 1);
 
     vk::PipelineColorBlendAttachmentState colorBlendAttachmentState;
     colorBlendAttachmentState.setBlendEnable(false)
         .setColorWriteMask(vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA);
-    spk::ColorBlendState colorBlendState;
-    colorBlendState.attachmentStates = {colorBlendAttachmentState};
-
-    spk::DynamicState dynamicState;
-
-    pipelines[pipelineIndex].create(shaderStages, 
-        vertexInputState,
-        assemblyState,
-        tessellationState,
-        viewportState,
-        rasterizationState,
-        multisampleState,
-        depthStencilState,
-        colorBlendState,
-        dynamicState,
-        info);
+    pipelines[pipelineIndex].addColorBlendState(false, vk::LogicOp::eEquivalent, {colorBlendAttachmentState}, {1, 1, 1, 1})
+        .setLayout(layout)
+        .setRenderPass(renderPass)
+        .setSubpassIndex(subpassIndex)
+        .create();
 }
